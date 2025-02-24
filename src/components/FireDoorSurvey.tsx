@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ChevronDown, ChevronUp, Camera, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -18,24 +18,24 @@ interface DropdownWithNotesProps {
 const DropdownWithNotes = ({ label, options, value, onChange, notes, onNotesChange }: DropdownWithNotesProps) => (
   <div className="mb-4">
     <label className="block text-sm font-medium mb-1">{label}</label>
-    <select 
-      className="w-full p-2 border rounded mb-2"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-    >
-      {options.map(option => (
-        <option key={option} value={option}>{option}</option>
-      ))}
-    </select>
-    {value !== 'OK' && (
-      <textarea
-        className="w-full p-2 border rounded"
-        placeholder="Additional notes..."
+    <div className="flex gap-2">
+      <select 
+        className="w-1/2 p-2 border rounded"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        {options.map(option => (
+          <option key={option} value={option}>{option}</option>
+        ))}
+      </select>
+      <input
+        type="text"
+        className="w-1/2 p-2 border rounded"
+        placeholder="Optional notes..."
         value={notes}
         onChange={(e) => onNotesChange(e.target.value)}
-        rows={2}
       />
-    )}
+    </div>
   </div>
 );
 
@@ -100,13 +100,22 @@ interface FormValues {
   hardware: { status: string; notes: string };
   doorTag: { status: string; notes: string };
   doorIndicator: { status: string; notes: string };
-  photos: Array<{ file: File; description: string; timestamp: string }>;
+  photos: Array<{
+    file_path: string;
+    description: string;
+    timestamp: string;
+  }>;
   additionalNotes: string;
 }
 
 type FormField = keyof FormValues;
 
-export const FireDoorSurvey: React.FC = () => {
+// Add a refresh prop to the component
+interface FireDoorSurveyProps {
+  onSubmitSuccess?: () => void;
+}
+
+export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess }) => {
   // Status options
   const statusOptions = {
     doorLeaf: ['OK', 'Chipped', 'Cracked', 'With Voids', 'Altered', 'Binding'],
@@ -133,26 +142,19 @@ export const FireDoorSurvey: React.FC = () => {
   // Door type state
   const [doorType, setDoorType] = useState('single');
   
-  // Form values state
-  const [formValues, setFormValues] = useState<FormValues>({
-    // Location Details
+  // Add these near the top of the component
+  const initialFormState: FormValues = {
     locationName: '',
     locationId: '',
-    
-    // Door Details
     doorType: 'single',
     installationType: 'interior',
     manufacturer: '',
     doorsetNumber: '',
     dateInstalled: '',
     fireRating: '',
-    
-    // Components & Hardware
     doorCloserManufacturer: '',
     numHinges: 0,
     hardwareSupplier: '',
-    
-    // Dimensions
     hasStandardGaps: false,
     gapsNotes: '',
     leafDimensions: {
@@ -161,13 +163,8 @@ export const FireDoorSurvey: React.FC = () => {
       thickness: '',
       hasVisionPanel: false,
       visionPanelMaterial: 'clear',
-      visionPanel: {
-        width: '',
-        height: ''
-      }
+      visionPanel: { width: '', height: '' }
     },
-    
-    // Inspection checklist
     doorLeaf: { status: 'OK', notes: '' },
     doorFrame: { status: 'OK', notes: '' },
     visionPanel: { status: 'OK', notes: '' },
@@ -178,11 +175,15 @@ export const FireDoorSurvey: React.FC = () => {
     hardware: { status: 'OK', notes: '' },
     doorTag: { status: 'OK', notes: '' },
     doorIndicator: { status: 'OK', notes: '' },
-    
-    // Photos
     photos: [],
     additionalNotes: ''
-  });
+  };
+
+  // Add state to track form changes
+  const [isDirty, setIsDirty] = useState(false);
+
+  // Update form state initialization
+  const [formValues, setFormValues] = useState<FormValues>(initialFormState);
 
   // Toggle section visibility
   const toggleSection = (section: SectionName) => {
@@ -192,8 +193,9 @@ export const FireDoorSurvey: React.FC = () => {
     }));
   };
 
-  // Handle form value changes
+  // Modify handleInputChange to track changes
   const handleInputChange = (field: FormField, value: any) => {
+    setIsDirty(true);
     setFormValues(prev => ({
       ...prev,
       [field]: typeof value === 'object' ? { ...(prev[field] as object), ...value } : value
@@ -217,18 +219,145 @@ export const FireDoorSurvey: React.FC = () => {
   };
 
   // Handle photo upload
-  const handlePhotoUpload = (files: FileList | null) => {
+  const handlePhotoUpload = async (files: FileList | null) => {
     if (!files) return;
-    const newPhotos = [...formValues.photos];
-    Array.from(files).forEach(file => {
-      newPhotos.push({
-        file,
-        description: '',
-        timestamp: new Date().toISOString()
-      });
-    });
-    handleInputChange('photos', newPhotos);
+    
+    const newPhotos = Array.isArray(formValues.photos) 
+      ? [...formValues.photos] 
+      : [];
+    
+    for (const file of Array.from(files)) {
+      try {
+        console.log('Uploading file:', file.name);
+        
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        
+        const { data, error } = await supabase.storage
+          .from('fire-door-photos')
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (error) throw error;
+
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('fire-door-photos')
+          .getPublicUrl(fileName);
+
+        console.log('Adding photo to form:', {
+          file_path: publicUrl,
+          description: '',
+          timestamp: new Date().toISOString()
+        });
+
+        // Add to photos array
+        newPhotos.push({
+          file_path: publicUrl,
+          description: '',
+          timestamp: new Date().toISOString()
+        });
+
+        // Update form state immediately after each upload
+        setFormValues(prev => ({
+          ...prev,
+          photos: newPhotos
+        }));
+      } catch (error: unknown) {
+        console.error('Detailed error uploading photo:', error);
+        if (error instanceof Error) {
+          alert(`Error uploading photo: ${error.message}`);
+        } else {
+          alert('Error uploading photo');
+        }
+      }
+    }
   };
+
+  // Update handleSubmit
+  const handleSubmit = async () => {
+    try {
+      const submissionData = {
+        location_name: formValues.locationName,
+        location_id: formValues.locationId,
+        door_type: formValues.doorType,
+        installation_type: formValues.installationType,
+        manufacturer: formValues.manufacturer,
+        doorset_number: formValues.doorsetNumber,
+        date_installed: formValues.dateInstalled || null, // Allow null if empty
+        fire_rating: formValues.fireRating,
+        door_closer_manufacturer: formValues.doorCloserManufacturer,
+        num_hinges: formValues.numHinges,
+        hardware_supplier: formValues.hardwareSupplier,
+        has_standard_gaps: formValues.hasStandardGaps,
+        gaps_notes: formValues.gapsNotes,
+        leaf_dimensions: formValues.leafDimensions,
+        inspection_results: {
+          door_leaf: formValues.doorLeaf,
+          door_frame: formValues.doorFrame,
+          vision_panel: formValues.visionPanel,
+          intumescent_seal: formValues.intumescentSeal,
+          smoke_seal: formValues.smokeSeal,
+          hinges: formValues.hinges,
+          door_closer: formValues.doorCloser,
+          hardware: formValues.hardware,
+          door_tag: formValues.doorTag,
+          door_indicator: formValues.doorIndicator
+        },
+        photos: Array.isArray(formValues.photos) ? formValues.photos.map(p => ({
+          file_path: p.file_path,
+          description: p.description,
+          timestamp: p.timestamp
+        })) : [],
+        additional_notes: formValues.additionalNotes
+      };
+
+      console.log('Submitting data:', submissionData);
+
+      const { data, error } = await supabase
+        .from('fire_door_surveys')
+        .insert([submissionData])
+        .select();
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+      
+      console.log('Success! Data:', data);
+      // Reset form
+      setFormValues(initialFormState);
+      setIsDirty(false);
+      onSubmitSuccess?.();
+    } catch (error: unknown) {
+      console.error('Detailed error:', error);
+      if (error instanceof Error) {
+        alert(`Error submitting survey: ${error.message}`);
+      } else {
+        alert('An unknown error occurred while submitting the survey');
+      }
+    }
+  };
+
+  useEffect(() => {
+    const testConnection = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('fire_door_surveys')
+          .select('count')
+          .limit(1);
+        
+        if (error) throw error;
+        console.log('Supabase connection successful');
+      } catch (error) {
+        console.error('Supabase connection error:', error);
+      }
+    };
+
+    testConnection();
+  }, []);
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
@@ -407,7 +536,7 @@ export const FireDoorSurvey: React.FC = () => {
                   checked={formValues.hasStandardGaps}
                   onChange={(e) => handleInputChange('hasStandardGaps', e.target.checked)}
                 />
-                <label>3mm standard gaps throughout</label>
+                <label>3mm standard gaps throughout (+/- 1mm)</label>
               </div>
               {!formValues.hasStandardGaps && (
                 <textarea
@@ -568,25 +697,23 @@ export const FireDoorSurvey: React.FC = () => {
               onNotesChange={(value) => handleNotesChange('visionPanel', value)}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <DropdownWithNotes 
-                label="Intumescent Seal" 
-                options={statusOptions.seals}
-                value={formValues.intumescentSeal.status}
-                onChange={(value) => handleStatusChange('intumescentSeal', value)}
-                notes={formValues.intumescentSeal.notes}
-                onNotesChange={(value) => handleNotesChange('intumescentSeal', value)}
-              />
+            <DropdownWithNotes 
+              label="Intumescent Seal" 
+              options={statusOptions.seals}
+              value={formValues.intumescentSeal.status}
+              onChange={(value) => handleStatusChange('intumescentSeal', value)}
+              notes={formValues.intumescentSeal.notes}
+              onNotesChange={(value) => handleNotesChange('intumescentSeal', value)}
+            />
 
-              <DropdownWithNotes 
-                label="Smoke Seal" 
-                options={statusOptions.seals}
-                value={formValues.smokeSeal.status}
-                onChange={(value) => handleStatusChange('smokeSeal', value)}
-                notes={formValues.smokeSeal.notes}
-                onNotesChange={(value) => handleNotesChange('smokeSeal', value)}
-              />
-            </div>
+            <DropdownWithNotes 
+              label="Smoke Seal" 
+              options={statusOptions.seals}
+              value={formValues.smokeSeal.status}
+              onChange={(value) => handleStatusChange('smokeSeal', value)}
+              notes={formValues.smokeSeal.notes}
+              onNotesChange={(value) => handleNotesChange('smokeSeal', value)}
+            />
 
             <DropdownWithNotes 
               label="Hinges Status" 
@@ -664,30 +791,54 @@ export const FireDoorSurvey: React.FC = () => {
             </div>
 
             {formValues.photos.length > 0 && (
-              <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 {formValues.photos.map((photo, index) => (
                   <div key={index} className="border rounded p-4">
+                    <img 
+                      src={photo.file_path} 
+                      alt={photo.description || `Photo ${index + 1}`}
+                      className="w-full h-48 object-cover rounded mb-2"
+                    />
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium">Photo {index + 1}</span>
                       <button
                         className="text-red-600 hover:text-red-800"
-                        onClick={() => {
-                          const newPhotos = formValues.photos.filter((_, i) => i !== index);
-                          handleInputChange('photos', newPhotos);
+                        onClick={async () => {
+                          try {
+                            // Delete from storage
+                            const fileName = photo.file_path.split('/').pop();
+                            if (fileName) {
+                              await supabase.storage
+                                .from('fire-door-photos')
+                                .remove([fileName]);
+                            }
+                            // Remove from form state
+                            const newPhotos = formValues.photos.filter((_, i) => i !== index);
+                            handleInputChange('photos', newPhotos);
+                          } catch (error) {
+                            console.error('Error deleting photo:', error);
+                            alert('Error deleting photo');
+                          }
                         }}
                       >
-                        Remove
+                        Delete
                       </button>
                     </div>
                     <input
                       type="text"
-                      className="w-full p-2 border rounded mb-2"
+                      className="w-full p-2 border rounded"
                       placeholder="Photo description..."
                       value={photo.description}
                       onChange={(e) => {
-                        const newPhotos = [...formValues.photos];
-                        newPhotos[index].description = e.target.value;
-                        handleInputChange('photos', newPhotos);
+                        const newPhotos = formValues.photos.map((p, i) => 
+                          i === index 
+                            ? { ...p, description: e.target.value }
+                            : p
+                        );
+                        setFormValues(prev => ({
+                          ...prev,
+                          photos: newPhotos
+                        }));
                       }}
                     />
                   </div>
@@ -709,14 +860,22 @@ export const FireDoorSurvey: React.FC = () => {
         )}
       </div>
 
-      {/* Submit Button */}
-      <div className="flex justify-end mt-8">
+      {/* Submit Buttons */}
+      <div className="flex justify-end gap-4 mt-8">
         <button 
-          className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          className="px-6 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
           onClick={() => {
-            // Handle form submission here
-            console.log('Form values:', formValues);
+            if (confirm('Are you sure you want to cancel? All changes will be lost.')) {
+              setFormValues(initialFormState);
+            }
           }}
+        >
+          Cancel
+        </button>
+        <button 
+          className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          onClick={handleSubmit}
+          disabled={!isDirty}
         >
           Submit Survey
         </button>
