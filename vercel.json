@@ -1,9 +1,3 @@
 {
-  "buildCommand": "next build",
-  "outputDirectory": ".next",
-  "framework": "nextjs",
-  "installCommand": "npm install",
-  "images": {
-    "domains": ["nfxxwxvmzioanuksjcxp.supabase.co"]
-  }
+  "framework": "nextjs"
 } 
