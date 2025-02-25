@@ -17,10 +17,11 @@ interface DropdownWithNotesProps {
 
 // Reusable dropdown component with notes
 const DropdownWithNotes = ({ label, options, value, onChange, notes, onNotesChange }: DropdownWithNotesProps) => (
-  <div className="mb-4">
-    <label className="block text-sm font-medium mb-1">{label}</label>
-    <div className="flex gap-2">
-      <div className="w-1/2 p-2 border rounded">
+  <div className="mb-6">
+    <label className="block text-sm font-medium mb-2">{label}</label>
+    <div className="space-y-4">
+      {/* Checkboxes for issues */}
+      <div className="border rounded p-4 space-y-2">
         {options.map(option => (
           <label key={option} className="flex items-center gap-2">
             <input
@@ -30,19 +31,22 @@ const DropdownWithNotes = ({ label, options, value, onChange, notes, onNotesChan
                 const newValue = e.target.checked
                   ? [...value, option]
                   : value.filter(v => v !== option);
-                onChange(newValue);
+                onChange(newValue.length ? newValue : []);  // Empty array if no issues selected
               }}
+              className="w-4 h-4"
             />
             {option}
           </label>
         ))}
       </div>
-      <input
-        type="text"
-        className="w-1/2 p-2 border rounded"
-        placeholder="Optional notes..."
+
+      {/* Notes textarea */}
+      <textarea
+        className="w-full p-2 border rounded mt-2"
+        placeholder="Additional notes..."
         value={notes}
         onChange={(e) => onNotesChange(e.target.value)}
+        rows={3}
       />
     </div>
   </div>
@@ -71,7 +75,7 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
 );
 
 // Add at the top with other interfaces
-type SectionName = 'location' | 'doorDetails' | 'components' | 'dimensions' | 'inspection' | 'photos' | 'siteConditions' | 'doorArchitrave' | 'doorMaterial' | 'buildingFeatures';
+type SectionName = 'location' | 'doorDetails' | 'components' | 'dimensions' | 'buildingFeatures' | 'inspection' | 'photos';
 
 // First update the FormValues interface for inspection items
 interface InspectionItem {
@@ -79,12 +83,12 @@ interface InspectionItem {
   notes: string;
 }
 
-// Add at the top with other interfaces
+// Update FormValues interface to remove unused properties
 interface FormValues {
   locationName: string;
   coordinates: {
-    lat: number;
-    lng: number;
+    lat: number | null;
+    lng: number | null;
   };
   doorType: string;
   installationType: string;
@@ -99,41 +103,14 @@ interface FormValues {
     integrity: string;
     insulation: string;
   };
-  doorCloserManufacturer: string;
-  numHinges: number;
-  hardwareSupplier: string;
-  hasStandardGaps: boolean;
-  hasStandardBottomGap: boolean;
-  gapsNotes: {
-    top: string;
-    sides: string;
-    bottom: string;
-    meetingStile?: string;
-  };
-  leafDimensions: {
-    width: string;
-    height: string;
-    thickness: string;
-    hasVisionPanel: boolean;
-    visionPanelMaterial: string;
-    visionPanel: {
-      width: string;
-      height: string;
-    };
-  };
-  doorLeaf: { status: string[], notes: string };
-  doorFrame: { status: string[], notes: string };
-  visionPanel: { status: string[], notes: string };
-  intumescentSeal: { status: string[], notes: string };
-  smokeSeal: { status: string[], notes: string };
-  hinges: {
-    numSets: number;
+  doorCloser: {
     brand: string;
     ceMarking: boolean;
     status: string[];
     notes: string;
   };
-  doorCloser: {
+  hinges: {
+    numSets: number | null;
     brand: string;
     ceMarking: boolean;
     status: string[];
@@ -145,34 +122,16 @@ interface FormValues {
     status: string[];
     notes: string;
   };
-  doorTag: { status: string[], notes: string };
-  doorIndicator: { status: string[], notes: string };
-  photos: Array<{
-    file_path: string;
-    description: string;
-    timestamp: string;
-  }>;
-  additionalNotes: string;
-  siteConditions: {
-    securityFeatures: {
-      type: string;
-      otherSpecify?: string;
+  leafDimensions: {
+    width: string;
+    height: string;
+    thickness: string;
+    hasVisionPanel: boolean;
+    visionPanelMaterial: string;
+    visionPanel: {
+      width: string;
+      height: string;
     };
-    wallSubstrate: {
-      type: string;
-      otherSpecify?: string;
-    };
-    wallFinish: {
-      type: string;
-      otherSpecify?: string;
-    };
-    floorSurface: string;
-    floorFinish: string[];
-  };
-  doorArchitrave: string;
-  doorMaterial: {
-    type: string;
-    otherSpecify?: string;
   };
   secondLeafDimensions?: {
     width: string;
@@ -196,21 +155,23 @@ interface FormValues {
   buildingFeatures: {
     security: {
       features: string[];
-      moreDetails?: string;
+      moreDetails: string;
     };
     wall: {
       substrate: string;
-      substrateOther?: string;
+      substrateOther: string;
       finish: string;
-      finishOther?: string;
+      finishOther: string;
       architrave: string;
     };
     floor: {
       surface: string;
       finish: string[];
-      finishOther?: string;
+      finishOther: string;
     };
     notes: string;
+    doorLeafMaterial: string;
+    doorFrameMaterial: string;
   };
   inspection: {
     doorLeaf: InspectionItem;
@@ -221,18 +182,20 @@ interface FormValues {
     intumescentSeal: InspectionItem;
     smokeSeal: InspectionItem;
     hinges: InspectionItem;
-    doorCloser: InspectionItem & {
-      slowClosing: boolean;  // Takes more than 25 seconds to close
-    };
-    hardware: InspectionItem & {
-      rattling: boolean;  // Does not firmly close without rattling
-    };
+    doorCloser: InspectionItem & { slowClosing: boolean };
+    hardware: InspectionItem & { rattling: boolean };
     fireTag: InspectionItem;
     doorSignage: InspectionItem & {
-      oneSideOnly: boolean;  // One side only but required on both
-      notNZS4520: boolean;  // Not in accordance with NZS 4520
+      oneSideOnly: boolean;
+      notNZS4520: boolean;
     };
   };
+  photos: Array<{
+    file_path: string;
+    description: string;
+    timestamp: string;
+  }>;
+  additionalNotes: string;
 }
 
 type FormField = keyof FormValues;
@@ -243,17 +206,17 @@ interface FireDoorSurveyProps {
 }
 
 export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess }) => {
-  // Status options
+  // Update the status options to remove 'OK'
   const statusOptions = {
-    doorLeaf: ['OK', 'Chipped', 'Cracked', 'With Voids', 'Altered', 'Binding'],
-    doorFrame: ['OK', 'Chipped', 'Cracked', 'With Voids', 'Altered'],
-    visionPanel: ['OK', 'Not Present', 'Cracked', 'Scratched', 'Clear', 'With Mesh'],
-    seals: ['OK', 'Loose', 'Incomplete', 'Missing', 'With Tears'],
-    hinges: ['OK', 'Loose Screw', 'Missing Screw', 'Squeaky', 'Misaligned', 'Rusty/Tarnished'],
-    doorCloser: ['OK', 'Delayed/Not Closing', 'Rapid Closing', 'Unusual Noise'],
-    hardware: ['OK', 'Sticky Locks', 'Loose Locks', 'Misaligned', 'Needs Lubrication'],
-    doorTag: ['OK', 'Missing', 'Unreadable', 'Painted'],
-    doorIndicator: ['OK', 'Missing', 'Peeled-off/Unreadable']
+    doorLeaf: ['Chipped', 'Cracked', 'With Voids', 'Altered', 'Binding'],
+    doorFrame: ['Chipped', 'Cracked', 'With Voids', 'Altered'],
+    visionPanel: ['Not Present', 'Cracked', 'Scratched'],
+    seals: ['Loose', 'Incomplete', 'Missing', 'With Tears'],
+    hinges: ['Loose Screw', 'Missing Screw', 'Squeaky', 'Misaligned', 'Rusty/Tarnished'],
+    doorCloser: ['Delayed/Not Closing', 'Rapid Closing', 'Unusual Noise'],
+    hardware: ['Sticky Locks', 'Loose Locks', 'Misaligned', 'Needs Lubrication'],
+    doorTag: ['Missing', 'Unreadable', 'Painted'],
+    doorIndicator: ['Missing', 'Peeled-off/Unreadable']
   };
 
   // Section visibility state
@@ -262,12 +225,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
     doorDetails: true,
     components: true,
     dimensions: true,
+    buildingFeatures: true,
     inspection: true,
-    photos: true,
-    siteConditions: true,
-    doorArchitrave: true,
-    doorMaterial: true,
-    buildingFeatures: true
+    photos: true
   });
 
   // Door type state
@@ -276,44 +236,31 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
   // Add these near the top of the component
   const initialFormState: FormValues = {
     locationName: '',
-    coordinates: { lat: -41.2865, lng: 174.7762 },
+    coordinates: { 
+      lat: null,  // Start with null
+      lng: null   // Start with null
+    },
     doorType: 'single',
     installationType: 'interior',
     manufacturer: '',
     doorsetNumber: '',
-    dateInstalled: { day: '', month: '', year: '' },
-    fireRating: { integrity: '', insulation: '' },
-    doorCloserManufacturer: '',
-    numHinges: 0,
-    hardwareSupplier: '',
-    hasStandardGaps: false,
-    hasStandardBottomGap: false,
-    gapsNotes: {
-      top: '',
-      sides: '',
-      bottom: '',
+    dateInstalled: { 
+      day: '', 
+      month: '', 
+      year: '' 
     },
-    leafDimensions: {
-      width: '',
-      height: '',
-      thickness: '',
-      hasVisionPanel: false,
-      visionPanelMaterial: 'clear',
-      visionPanel: { width: '', height: '' }
+    fireRating: { 
+      integrity: '', 
+      insulation: '' 
     },
-    doorLeaf: { status: [], notes: '' },
-    doorFrame: { status: [], notes: '' },
-    visionPanel: { status: [], notes: '' },
-    intumescentSeal: { status: [], notes: '' },
-    smokeSeal: { status: [], notes: '' },
-    hinges: {
-      numSets: 0,
+    doorCloser: {
       brand: '',
       ceMarking: false,
       status: [],
       notes: ''
     },
-    doorCloser: {
+    hinges: {
+      numSets: null,
       brand: '',
       ceMarking: false,
       status: [],
@@ -325,20 +272,28 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
       status: [],
       notes: ''
     },
-    doorTag: { status: [], notes: '' },
-    doorIndicator: { status: [], notes: '' },
-    photos: [],
-    additionalNotes: '',
-    siteConditions: {
-      securityFeatures: { type: 'Ordinary Lockset' },
-      wallSubstrate: { type: 'Masonry' },
-      wallFinish: { type: 'Painted' },
-      floorSurface: 'Leveled',
-      floorFinish: []
+    leafDimensions: {
+      width: '',
+      height: '',
+      thickness: '',
+      hasVisionPanel: false,
+      visionPanelMaterial: 'clear',
+      visionPanel: { 
+        width: '', 
+        height: '' 
+      }
     },
-    doorArchitrave: 'With',
-    doorMaterial: { type: 'Timber Leaf and Timber Frame' },
-    secondLeafDimensions: undefined,
+    secondLeafDimensions: {
+      width: '',
+      height: '',
+      thickness: '',
+      hasVisionPanel: false,
+      visionPanelMaterial: 'clear',
+      visionPanel: { 
+        width: '', 
+        height: '' 
+      }
+    },
     gaps: {
       top: null,
       bottom: null,
@@ -353,9 +308,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
         moreDetails: ''
       },
       wall: {
-        substrate: 'Masonry',
+        substrate: '',
         substrateOther: '',
-        finish: 'Painted',
+        finish: '',
         finishOther: '',
         architrave: 'With'
       },
@@ -364,22 +319,26 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
         finish: [],
         finishOther: ''
       },
-      notes: ''
+      notes: '',
+      doorLeafMaterial: '',
+      doorFrameMaterial: ''
     },
     inspection: {
-      doorLeaf: { status: ['OK'], notes: '' },
-      doorLeafMaterial: { status: ['OK'], notes: '' },
-      doorFrame: { status: ['OK'], notes: '' },
-      doorFrameMaterial: { status: ['OK'], notes: '' },
-      visionPanel: { status: ['OK'], notes: '' },
-      intumescentSeal: { status: ['OK'], notes: '' },
-      smokeSeal: { status: ['OK'], notes: '' },
-      hinges: { status: ['OK'], notes: '' },
-      doorCloser: { status: ['OK'], notes: '', slowClosing: false },
-      hardware: { status: ['OK'], notes: '', rattling: false },
-      fireTag: { status: ['OK'], notes: '' },
-      doorSignage: { status: ['OK'], notes: '', oneSideOnly: false, notNZS4520: false }
+      doorLeaf: { status: [], notes: '' },
+      doorLeafMaterial: { status: [], notes: '' },
+      doorFrame: { status: [], notes: '' },
+      doorFrameMaterial: { status: [], notes: '' },
+      visionPanel: { status: [], notes: '' },
+      intumescentSeal: { status: [], notes: '' },
+      smokeSeal: { status: [], notes: '' },
+      hinges: { status: [], notes: '' },
+      doorCloser: { status: [], notes: '', slowClosing: false },
+      hardware: { status: [], notes: '', rattling: false },
+      fireTag: { status: [], notes: '' },
+      doorSignage: { status: [], notes: '', oneSideOnly: false, notNZS4520: false }
     },
+    photos: [],
+    additionalNotes: ''
   };
 
   // Add state to track form changes
@@ -391,10 +350,18 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
   // Near the top of the component, after initialFormState
   const [isLoadingLocation, setIsLoadingLocation] = useState(true);
 
+  // Add state to control location updates
+  const [stopLocationUpdates, setStopLocationUpdates] = useState(false);
+
+  // Add this helper function near the top of the component
+  const preventScroll = (e: React.WheelEvent<HTMLInputElement>) => {
+    e.currentTarget.blur();
+  };
+
   useEffect(() => {
-    // Get current location when component mounts
     if (navigator.geolocation) {
-      const watchId = navigator.geolocation.watchPosition(
+      setIsLoadingLocation(true);
+      navigator.geolocation.getCurrentPosition(
         (position) => {
           handleInputChange('coordinates', {
             lat: position.coords.latitude,
@@ -404,46 +371,16 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
         },
         (error) => {
           console.warn('Location error:', error.message);
-          // More user-friendly error handling
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              alert('Please enable location access to use current location.');
-              break;
-            case error.POSITION_UNAVAILABLE:
-              alert('Location information is unavailable. Using default location.');
-              break;
-            case error.TIMEOUT:
-              alert('Location request timed out. Using default location.');
-              break;
-            default:
-              alert('An error occurred getting location. Using default location.');
-          }
-          // Fall back to default coordinates (Wellington)
+          // Default to Wellington only if geolocation fails
           handleInputChange('coordinates', { 
             lat: -41.2865, 
             lng: 174.7762 
           });
           setIsLoadingLocation(false);
-        },
-        {
-          enableHighAccuracy: false, // Set to false for faster response
-          timeout: 10000,           // Reduce timeout to 10 seconds
-          maximumAge: 300000        // Allow cached positions up to 5 minutes old
         }
       );
-
-      // Cleanup function to stop watching location
-      return () => navigator.geolocation.clearWatch(watchId);
-    } else {
-      // Geolocation not supported
-      alert('Geolocation is not supported by your browser. Using default location.');
-      handleInputChange('coordinates', { 
-        lat: -41.2865, 
-        lng: 174.7762 
-      });
-      setIsLoadingLocation(false);
     }
-  }, []); // Empty dependency array means this runs once on mount
+  }, []);
 
   // Toggle section visibility
   const toggleSection = (section: SectionName) => {
@@ -495,115 +432,93 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
     });
   };
 
-  // Handle photo upload
+  // Update the handlePhotoUpload function
   const handlePhotoUpload = async (files: FileList | null) => {
     if (!files) return;
     
-    const newPhotos = Array.isArray(formValues.photos) 
-      ? [...formValues.photos] 
-      : [];
-    
     for (const file of Array.from(files)) {
       try {
-        console.log('Uploading file:', file.name);
-        
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}.${fileExt}`;
-        
-        const { data, error } = await supabase.storage
-          .from('fire-door-photos')
-          .upload(fileName, file, {
-            cacheControl: '3600',
-            upsert: false
-          });
+        // Convert file to data URL
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const newPhoto = {
+            file_path: reader.result as string,
+            description: '',
+            timestamp: new Date().toISOString()
+          };
 
-        if (error) throw error;
+          setFormValues(prev => ({
+            ...prev,
+            photos: [...prev.photos, newPhoto]
+          }));
+        };
+        reader.readAsDataURL(file);
 
-        // Get public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('fire-door-photos')
-          .getPublicUrl(fileName);
-
-        console.log('Adding photo to form:', {
-          file_path: publicUrl,
-          description: '',
-          timestamp: new Date().toISOString()
-        });
-
-        // Add to photos array
-        newPhotos.push({
-          file_path: publicUrl,
-          description: '',
-          timestamp: new Date().toISOString()
-        });
-
-        // Update form state immediately after each upload
-        setFormValues(prev => ({
-          ...prev,
-          photos: newPhotos
-        }));
-      } catch (error: unknown) {
-        console.error('Detailed error uploading photo:', error);
-        if (error instanceof Error) {
-          alert(`Error uploading photo: ${error.message}`);
-        } else {
-          alert('Error uploading photo');
-        }
+      } catch (error) {
+        console.error('Error handling photo:', error);
+        alert('Error adding photo');
       }
     }
   };
 
-  // Update the photo deletion handler
-  const handlePhotoDelete = async (index: number) => {
-    try {
-      const photo = formValues.photos[index];
-      const fileName = photo.file_path.split('/').pop();
-      
-      if (fileName) {
-        await supabase.storage
-          .from('fire-door-photos')
-          .remove([fileName]);
-      }
-      
-      const newPhotos = [...formValues.photos];
-      newPhotos.splice(index, 1);
-      setFormValues(prev => ({
-        ...prev,
-        photos: newPhotos
-      }));
-    } catch (error) {
-      console.error('Error deleting photo:', error);
-      alert('Error deleting photo');
-    }
+  // Update the handlePhotoDelete function
+  const handlePhotoDelete = (index: number) => {
+    setFormValues(prev => ({
+      ...prev,
+      photos: prev.photos.filter((_, i) => i !== index)
+    }));
   };
 
   // Update handleSubmit
   const handleSubmit = async () => {
     try {
+      const { passed } = getSurveyStatus(formValues);
+
+      // Default coordinates (Wellington)
+      const defaultLat = -41.2865;
+      const defaultLng = 174.7762;
+
+      // Use actual coordinates or defaults
+      const lat = formValues.coordinates.lat ?? defaultLat;
+      const lng = formValues.coordinates.lng ?? defaultLng;
+
       const submissionData = {
         location_name: formValues.locationName,
-        coordinates: formValues.coordinates,
+        latitude: lat,
+        longitude: lng,
+        location: `POINT(${lng} ${lat})`,
+        coordinates: `POINT(${lng} ${lat})`,
         door_type: formValues.doorType,
         installation_type: formValues.installationType,
         manufacturer: formValues.manufacturer,
         doorset_number: formValues.doorsetNumber,
-        date_installed: formValues.dateInstalled.day && formValues.dateInstalled.month && formValues.dateInstalled.year ? `${formValues.dateInstalled.year}-${formValues.dateInstalled.month}-${formValues.dateInstalled.day}` : null,
-        fire_rating: formValues.fireRating.integrity && formValues.fireRating.insulation ? `${formValues.fireRating.integrity}/${formValues.fireRating.insulation}` : null,
-        door_closer_manufacturer: formValues.doorCloserManufacturer,
-        num_hinges: formValues.numHinges,
-        hardware_supplier: formValues.hardwareSupplier,
-        has_standard_gaps: formValues.hasStandardGaps,
-        has_standard_bottom_gap: formValues.hasStandardBottomGap,
-        gaps_notes: JSON.stringify(formValues.gapsNotes),
+        date_installed: formValues.dateInstalled.day && formValues.dateInstalled.month && formValues.dateInstalled.year 
+          ? `${formValues.dateInstalled.year}-${formValues.dateInstalled.month}-${formValues.dateInstalled.day}` 
+          : null,
+        fire_rating: formValues.fireRating.integrity && formValues.fireRating.insulation 
+          ? `${formValues.fireRating.integrity}/${formValues.fireRating.insulation}` 
+          : null,
+        door_closer: JSON.stringify({
+          brand: formValues.doorCloser.brand,
+          ceMarking: formValues.doorCloser.ceMarking
+        }),
+        hinges: JSON.stringify({
+          numSets: formValues.hinges.numSets,
+          brand: formValues.hinges.brand,
+          ceMarking: formValues.hinges.ceMarking
+        }),
+        hardware: JSON.stringify({
+          brand: formValues.hardware.brand,
+          ceMarking: formValues.hardware.ceMarking
+        }),
         leaf_dimensions: JSON.stringify(formValues.leafDimensions),
         second_leaf_dimensions: formValues.secondLeafDimensions ? JSON.stringify(formValues.secondLeafDimensions) : null,
+        gaps: JSON.stringify(formValues.gaps),
+        building_features: JSON.stringify(formValues.buildingFeatures),
         inspection_results: JSON.stringify(formValues.inspection),
         photos: JSON.stringify(formValues.photos),
         additional_notes: formValues.additionalNotes,
-        site_conditions: JSON.stringify(formValues.siteConditions),
-        door_architrave: formValues.doorArchitrave,
-        door_material: JSON.stringify(formValues.doorMaterial),
-        building_features: JSON.stringify(formValues.buildingFeatures)
+        pass_fail: passed
       };
 
       console.log('Submitting data:', submissionData);
@@ -619,7 +534,6 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
       }
       
       console.log('Success! Data:', data);
-      // Reset form
       setFormValues(initialFormState);
       setIsDirty(false);
       onSubmitSuccess?.();
@@ -728,20 +642,18 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
       'Electromagnetic Door Closer',
       'Door Access',
       'Motion Sensors',
-      'More'
+      'Other'
     ],
     wallSubstrate: [
+      '',
       'Masonry',
       'Plasterboard',
       'Other'
     ],
     wallFinish: [
+      '',
       'Painted',
       'Other'
-    ],
-    doorArchitrave: [
-      'With',
-      'Without'
     ],
     floorSurface: [
       'Leveled',
@@ -754,6 +666,10 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
       'Wood',
       'With Threshold',
       'Other'
+    ],
+    doorArchitrave: [
+      'With',
+      'Without'
     ]
   };
 
@@ -773,11 +689,85 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
     doorSignage: ['Missing', 'Damaged', 'Incorrect', 'Not Visible']
   };
 
+  // Add number input restriction helper
+  const handleNumberInput = (e: React.KeyboardEvent<HTMLInputElement>, allowDecimal = false, allowNegative = false) => {
+    const allowedKeys = [
+      'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab',
+      '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
+    ];
+    
+    if (allowDecimal) allowedKeys.push('.');
+    if (allowNegative) allowedKeys.push('-');
+
+    if (!allowedKeys.includes(e.key)) {
+      e.preventDefault();
+    }
+
+    // Only allow one decimal point
+    if (allowDecimal && e.key === '.' && (e.target as HTMLInputElement).value.includes('.')) {
+      e.preventDefault();
+    }
+
+    // Only allow negative at start
+    if (allowNegative && e.key === '-' && (e.target as HTMLInputElement).value !== '') {
+      e.preventDefault();
+    }
+  };
+
+  // Add this helper function to check survey status
+  const getSurveyStatus = (formValues: FormValues) => {
+    const failures = [];
+
+    // Check gaps - only add if they fail
+    if (formValues.gaps.top !== null && formValues.gaps.top > 3) {
+      failures.push('Top gap exceeds 3mm');
+    }
+    if (formValues.gaps.bottom !== null && (formValues.gaps.bottom < 3 || formValues.gaps.bottom > 10)) {
+      failures.push('Bottom gap not between 3mm and 10mm');
+    }
+    if (formValues.gaps.leftSide !== null && formValues.gaps.leftSide > 3) {
+      failures.push('Left side gap exceeds 3mm');
+    }
+    if (formValues.gaps.rightSide !== null && formValues.gaps.rightSide > 3) {
+      failures.push('Right side gap exceeds 3mm');
+    }
+    if (formValues.gaps.inBetween !== null && (formValues.gaps.inBetween < 3 || formValues.gaps.inBetween > 10)) {
+      failures.push('In-between gap not between 3mm and 10mm');  // Updated range
+    }
+    if (formValues.gaps.protrusion !== null && formValues.gaps.protrusion > 1) {
+      failures.push('Protrusion exceeds 1mm');
+    }
+
+    // Check inspection items - only add if they have issues
+    const criticalInspectionItems = {
+      'Door Leaf': formValues.inspection.doorLeaf,
+      'Door Frame': formValues.inspection.doorFrame,
+      'Intumescent Seal': formValues.inspection.intumescentSeal,
+      'Smoke Seal': formValues.inspection.smokeSeal,
+      'Hinges': formValues.inspection.hinges,
+      'Door Closer': formValues.inspection.doorCloser,
+      'Locks and Latches': formValues.inspection.hardware,
+      'Door Tag': formValues.inspection.fireTag,
+      'Door Signage': formValues.inspection.doorSignage
+    };
+
+    Object.entries(criticalInspectionItems).forEach(([itemName, item]) => {
+      if (item.status.length > 0) {
+        failures.push(`${itemName} issues: ${item.status.join(', ')}`);
+      }
+    });
+
+    return {
+      passed: failures.length === 0,
+      failures: failures // Only contains actual failures
+    };
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       <h1 className="text-3xl font-bold mb-8">Fire Door Survey</h1>
 
-      {/* Location Details Section */}
+      {/* Location Details Section - Map hidden but still tracking coordinates */}
       <div className="bg-white rounded-lg shadow">
         <SectionHeader 
           title="Location Details" 
@@ -796,24 +786,7 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                 onChange={(e) => handleInputChange('locationName', e.target.value)}
               />
             </div>
-
-            <div className="h-[400px] relative">
-              {isLoadingLocation ? (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                  <p>Getting location...</p>
-                </div>
-              ) : (
-                <DynamicMap 
-                  center={[formValues.coordinates.lat || -41.2865, formValues.coordinates.lng || 174.7762]}
-                  onLocationSelect={(pos) => handleInputChange('coordinates', { lat: pos.lat, lng: pos.lng })}
-                >
-                  <LocationMarker
-                    position={[formValues.coordinates.lat || -41.2865, formValues.coordinates.lng || 174.7762]}
-                    onPositionChange={(pos) => handleInputChange('coordinates', { lat: pos.lat, lng: pos.lng })}
-                  />
-                </DynamicMap>
-              )}
-            </div>
+            {/* Map component hidden but still tracking coordinates in the background */}
           </div>
         )}
       </div>
@@ -856,7 +829,7 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
               </div>
             </div>
 
-            <h3 className="font-semibold mb-4">Fire Door Tagging</h3>
+            <h3 className="font-semibold mb-4">Fire Door Tag</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Manufacturer</label>
@@ -886,6 +859,8 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                     min="1"
                     max="31"
                     value={formValues.dateInstalled.day}
+                    onWheel={preventScroll}
+                    onKeyDown={(e) => handleNumberInput(e)}
                     onChange={(e) => handleInputChange('dateInstalled', {
                       ...formValues.dateInstalled,
                       day: e.target.value
@@ -898,6 +873,8 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                     min="1"
                     max="12"
                     value={formValues.dateInstalled.month}
+                    onWheel={preventScroll}
+                    onKeyDown={(e) => handleNumberInput(e)}
                     onChange={(e) => handleInputChange('dateInstalled', {
                       ...formValues.dateInstalled,
                       month: e.target.value
@@ -910,6 +887,8 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                     min="1900"
                     max={new Date().getFullYear()}
                     value={formValues.dateInstalled.year}
+                    onWheel={preventScroll}
+                    onKeyDown={(e) => handleNumberInput(e)}
                     onChange={(e) => handleInputChange('dateInstalled', {
                       ...formValues.dateInstalled,
                       year: e.target.value
@@ -918,13 +897,16 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Fire Resistance Rating (-/XX/XX)</label>
+                <label className="block text-sm font-medium mb-1">Fire Resistance Rating</label>
                 <div className="flex items-center gap-2">
                   <span className="text-lg">-/</span>
                   <input
                     type="number"
                     className="w-20 p-2 border rounded"
                     value={formValues.fireRating.integrity}
+                    min="0"
+                    onWheel={preventScroll}
+                    onKeyDown={(e) => handleNumberInput(e)}
                     onChange={(e) => handleInputChange('fireRating', {
                       ...formValues.fireRating,
                       integrity: e.target.value
@@ -935,6 +917,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                     type="number"
                     className="w-20 p-2 border rounded"
                     value={formValues.fireRating.insulation}
+                    min="0"
+                    onWheel={preventScroll}
+                    onKeyDown={(e) => handleNumberInput(e)}
                     onChange={(e) => handleInputChange('fireRating', {
                       ...formValues.fireRating,
                       insulation: e.target.value
@@ -997,10 +982,12 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                   <input 
                     type="number"
                     className="w-full p-2 border rounded"
-                    value={formValues.hinges.numSets}
+                    value={formValues.hinges.numSets ?? ''}
+                    onWheel={preventScroll}
+                    onKeyDown={(e) => handleNumberInput(e)}
                     onChange={(e) => handleInputChange('hinges', {
                       ...formValues.hinges,
-                      numSets: parseInt(e.target.value)
+                      numSets: e.target.value ? parseInt(e.target.value) : null
                     })}
                   />
                 </div>
@@ -1075,133 +1062,19 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
         />
         {expandedSections.dimensions && (
           <div className="p-6">
-            <h3 className="font-semibold mb-4">Gap Measurements (mm)</h3>
+            {/* First Leaf */}
+            <h3 className="font-semibold mb-4">
+              {formValues.doorType === 'double' ? 'Leaf Dimensions (Left)' : 'Leaf Dimensions'}
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium mb-1">Top Gap</label>
-                <input 
-                  type="number"
-                  step="0.1"
-                  className={`w-full p-2 border rounded ${
-                    formValues.gaps.top !== null && formValues.gaps.top > 3 ? 'border-red-500' : ''
-                  }`}
-                  value={formValues.gaps.top ?? ''}
-                  onChange={(e) => handleInputChange('gaps', {
-                    ...formValues.gaps,
-                    top: e.target.value ? parseFloat(e.target.value) : null
-                  })}
-                />
-                {formValues.gaps.top !== null && formValues.gaps.top > 3 && (
-                  <p className="text-red-500 text-sm mt-1">Must not exceed 3mm</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Bottom Gap</label>
-                <input 
-                  type="number"
-                  step="0.1"
-                  className={`w-full p-2 border rounded ${
-                    formValues.gaps.bottom !== null && (formValues.gaps.bottom < 3 || formValues.gaps.bottom > 10) ? 'border-red-500' : ''
-                  }`}
-                  value={formValues.gaps.bottom ?? ''}
-                  onChange={(e) => handleInputChange('gaps', {
-                    ...formValues.gaps,
-                    bottom: e.target.value ? parseFloat(e.target.value) : null
-                  })}
-                />
-                {formValues.gaps.bottom !== null && (formValues.gaps.bottom < 3 || formValues.gaps.bottom > 10) && (
-                  <p className="text-red-500 text-sm mt-1">Must be between 3mm and 10mm</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Left Side Gap</label>
-                <input 
-                  type="number"
-                  step="0.1"
-                  className={`w-full p-2 border rounded ${
-                    formValues.gaps.leftSide !== null && formValues.gaps.leftSide > 3 ? 'border-red-500' : ''
-                  }`}
-                  value={formValues.gaps.leftSide ?? ''}
-                  onChange={(e) => handleInputChange('gaps', {
-                    ...formValues.gaps,
-                    leftSide: e.target.value ? parseFloat(e.target.value) : null
-                  })}
-                />
-                {formValues.gaps.leftSide !== null && formValues.gaps.leftSide > 3 && (
-                  <p className="text-red-500 text-sm mt-1">Must not exceed 3mm</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Right Side Gap</label>
-                <input 
-                  type="number"
-                  step="0.1"
-                  className={`w-full p-2 border rounded ${
-                    formValues.gaps.rightSide !== null && formValues.gaps.rightSide > 3 ? 'border-red-500' : ''
-                  }`}
-                  value={formValues.gaps.rightSide ?? ''}
-                  onChange={(e) => handleInputChange('gaps', {
-                    ...formValues.gaps,
-                    rightSide: e.target.value ? parseFloat(e.target.value) : null
-                  })}
-                />
-                {formValues.gaps.rightSide !== null && formValues.gaps.rightSide > 3 && (
-                  <p className="text-red-500 text-sm mt-1">Must not exceed 3mm</p>
-                )}
-              </div>
-
-              {formValues.doorType === 'double' && (
-                <div>
-                  <label className="block text-sm font-medium mb-1">In-Between Gap</label>
-                  <input 
-                    type="number"
-                    step="0.1"
-                    className={`w-full p-2 border rounded ${
-                      formValues.gaps.inBetween !== null && (formValues.gaps.inBetween < 3 || formValues.gaps.inBetween > 4) ? 'border-red-500' : ''
-                    }`}
-                    value={formValues.gaps.inBetween ?? ''}
-                    onChange={(e) => handleInputChange('gaps', {
-                      ...formValues.gaps,
-                      inBetween: e.target.value ? parseFloat(e.target.value) : null
-                    })}
-                  />
-                  {formValues.gaps.inBetween !== null && (formValues.gaps.inBetween < 3 || formValues.gaps.inBetween > 4) && (
-                    <p className="text-red-500 text-sm mt-1">Must be between 3mm and 4mm</p>
-                  )}
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Protrusion from Frame</label>
-                <input 
-                  type="number"
-                  step="0.1"
-                  className={`w-full p-2 border rounded ${
-                    formValues.gaps.protrusion !== null && formValues.gaps.protrusion > 1 ? 'border-red-500' : ''
-                  }`}
-                  value={formValues.gaps.protrusion ?? ''}
-                  onChange={(e) => handleInputChange('gaps', {
-                    ...formValues.gaps,
-                    protrusion: e.target.value ? parseFloat(e.target.value) : null
-                  })}
-                />
-                {formValues.gaps.protrusion !== null && formValues.gaps.protrusion > 1 && (
-                  <p className="text-red-500 text-sm mt-1">Must not exceed 1mm</p>
-                )}
-              </div>
-            </div>
-
-            <h3 className="font-semibold mb-4">Leaf Dimensions</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div>
                 <label className="block text-sm font-medium mb-1">Width (mm)</label>
                 <input 
                   type="number"
                   className="w-full p-2 border rounded"
                   value={formValues.leafDimensions.width}
+                  onWheel={preventScroll}
+                  onKeyDown={(e) => handleNumberInput(e)}
                   onChange={(e) => handleInputChange('leafDimensions', {
                     ...formValues.leafDimensions,
                     width: e.target.value
@@ -1214,6 +1087,8 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                   type="number"
                   className="w-full p-2 border rounded"
                   value={formValues.leafDimensions.height}
+                  onWheel={preventScroll}
+                  onKeyDown={(e) => handleNumberInput(e)}
                   onChange={(e) => handleInputChange('leafDimensions', {
                     ...formValues.leafDimensions,
                     height: e.target.value
@@ -1226,6 +1101,8 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                   type="number"
                   className="w-full p-2 border rounded"
                   value={formValues.leafDimensions.thickness}
+                  onWheel={preventScroll}
+                  onKeyDown={(e) => handleNumberInput(e)}
                   onChange={(e) => handleInputChange('leafDimensions', {
                     ...formValues.leafDimensions,
                     thickness: e.target.value
@@ -1243,77 +1120,87 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                       hasVisionPanel: e.target.checked
                     })}
                   />
-                  <label>Vision Panel Present</label>
+                  <label>Vision Panel</label>
                 </div>
               </div>
             </div>
 
+            {/* First leaf vision panel */}
             {formValues.leafDimensions.hasVisionPanel && (
-              <div className="mt-6">
-                <h3 className="font-semibold mb-4">Vision Panel Details</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Width (mm)</label>
-                    <input 
-                      type="number"
-                      className="w-full p-2 border rounded"
-                      value={formValues.leafDimensions.visionPanel.width}
-                      onChange={(e) => handleInputChange('leafDimensions', {
-                        ...formValues.leafDimensions,
-                        visionPanel: {
-                          ...formValues.leafDimensions.visionPanel,
-                          width: e.target.value
-                        }
-                      })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Height (mm)</label>
-                    <input 
-                      type="number"
-                      className="w-full p-2 border rounded"
-                      value={formValues.leafDimensions.visionPanel.height}
-                      onChange={(e) => handleInputChange('leafDimensions', {
-                        ...formValues.leafDimensions,
-                        visionPanel: {
-                          ...formValues.leafDimensions.visionPanel,
-                          height: e.target.value
-                        }
-                      })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Material</label>
-                    <select
-                      className="w-full p-2 border rounded"
-                      value={formValues.leafDimensions.visionPanelMaterial}
-                      onChange={(e) => handleInputChange('leafDimensions', {
-                        ...formValues.leafDimensions,
-                        visionPanelMaterial: e.target.value
-                      })}
-                    >
-                      <option value="clear">Clear Glass</option>
-                      <option value="mesh">Mesh Glass</option>
-                      <option value="wire">Wired Glass</option>
-                      <option value="ceramic">Ceramic Glass</option>
-                    </select>
-                  </div>
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Width (mm)</label>
+                  <input 
+                    type="number"
+                    className="w-full p-2 border rounded"
+                    value={formValues.leafDimensions.visionPanel.width}
+                    onWheel={preventScroll}
+                    onKeyDown={(e) => handleNumberInput(e)}
+                    onChange={(e) => handleInputChange('leafDimensions', {
+                      ...formValues.leafDimensions,
+                      visionPanel: {
+                        ...formValues.leafDimensions.visionPanel,
+                        width: e.target.value
+                      }
+                    })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Height (mm)</label>
+                  <input 
+                    type="number"
+                    className="w-full p-2 border rounded"
+                    value={formValues.leafDimensions.visionPanel.height}
+                    onWheel={preventScroll}
+                    onKeyDown={(e) => handleNumberInput(e)}
+                    onChange={(e) => handleInputChange('leafDimensions', {
+                      ...formValues.leafDimensions,
+                      visionPanel: {
+                        ...formValues.leafDimensions.visionPanel,
+                        height: e.target.value
+                      }
+                    })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Material</label>
+                  <select
+                    className="w-full p-2 border rounded"
+                    value={formValues.leafDimensions.visionPanelMaterial}
+                    onChange={(e) => handleInputChange('leafDimensions', {
+                      ...formValues.leafDimensions,
+                      visionPanelMaterial: e.target.value
+                    })}
+                  >
+                    <option value="clear">Clear</option>
+                    <option value="mesh">With Mesh</option>
+                  </select>
                 </div>
               </div>
             )}
 
+            {/* Second Leaf (if double door) */}
             {formValues.doorType === 'double' && (
-              <div className="mt-6">
-                <h4 className="font-medium mb-2">Second Leaf Dimensions (R)</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <>
+                <h3 className="font-semibold mb-4">Leaf Dimensions (Right)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                   <div>
                     <label className="block text-sm font-medium mb-1">Width (mm)</label>
                     <input 
                       type="number"
                       className="w-full p-2 border rounded"
                       value={formValues.secondLeafDimensions?.width}
+                      onWheel={preventScroll}
+                      onKeyDown={(e) => handleNumberInput(e)}
                       onChange={(e) => handleInputChange('secondLeafDimensions', {
-                        ...formValues.secondLeafDimensions,
+                        ...formValues.secondLeafDimensions ?? {
+                          width: '',
+                          height: '',
+                          thickness: '',
+                          hasVisionPanel: false,
+                          visionPanelMaterial: 'clear',
+                          visionPanel: { width: '', height: '' }
+                        },
                         width: e.target.value
                       })}
                     />
@@ -1324,8 +1211,17 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                       type="number"
                       className="w-full p-2 border rounded"
                       value={formValues.secondLeafDimensions?.height}
+                      onWheel={preventScroll}
+                      onKeyDown={(e) => handleNumberInput(e)}
                       onChange={(e) => handleInputChange('secondLeafDimensions', {
-                        ...formValues.secondLeafDimensions,
+                        ...formValues.secondLeafDimensions ?? {
+                          width: '',
+                          height: '',
+                          thickness: '',
+                          hasVisionPanel: false,
+                          visionPanelMaterial: 'clear',
+                          visionPanel: { width: '', height: '' }
+                        },
                         height: e.target.value
                       })}
                     />
@@ -1336,198 +1232,229 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                       type="number"
                       className="w-full p-2 border rounded"
                       value={formValues.secondLeafDimensions?.thickness}
+                      onWheel={preventScroll}
+                      onKeyDown={(e) => handleNumberInput(e)}
                       onChange={(e) => handleInputChange('secondLeafDimensions', {
-                        ...formValues.secondLeafDimensions,
+                        ...formValues.secondLeafDimensions ?? {
+                          width: '',
+                          height: '',
+                          thickness: '',
+                          hasVisionPanel: false,
+                          visionPanelMaterial: 'clear',
+                          visionPanel: { width: '', height: '' }
+                        },
                         thickness: e.target.value
                       })}
                     />
                   </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Inspection Checklist Section */}
-      <div className="bg-white rounded-lg shadow">
-        <SectionHeader 
-          title="Inspection Checklist" 
-          section="inspection"
-          isExpanded={expandedSections.inspection}
-          onToggle={() => toggleSection('inspection')}
-        />
-        {expandedSections.inspection && (
-          <div className="p-6">
-            <DropdownWithNotes 
-              label="Door Leaf Status" 
-              options={statusOptions.doorLeaf}
-              value={formValues.inspection.doorLeaf.status}
-              onChange={(value) => handleStatusChange('inspection.doorLeaf.status', value)}
-              notes={formValues.inspection.doorLeaf.notes}
-              onNotesChange={(value) => handleNotesChange('inspection.doorLeaf.notes', value)}
-            />
-
-            <DropdownWithNotes 
-              label="Door Frame Status" 
-              options={statusOptions.doorFrame}
-              value={formValues.inspection.doorFrame.status}
-              onChange={(value) => handleStatusChange('inspection.doorFrame.status', value)}
-              notes={formValues.inspection.doorFrame.notes}
-              onNotesChange={(value) => handleNotesChange('inspection.doorFrame.notes', value)}
-            />
-
-            <DropdownWithNotes 
-              label="Vision Panel Status" 
-              options={statusOptions.visionPanel}
-              value={formValues.inspection.visionPanel.status}
-              onChange={(value) => handleStatusChange('inspection.visionPanel.status', value)}
-              notes={formValues.inspection.visionPanel.notes}
-              onNotesChange={(value) => handleNotesChange('inspection.visionPanel.notes', value)}
-            />
-
-            <DropdownWithNotes 
-              label="Intumescent Seal" 
-              options={statusOptions.seals}
-              value={formValues.inspection.intumescentSeal.status}
-              onChange={(value) => handleStatusChange('inspection.intumescentSeal.status', value)}
-              notes={formValues.inspection.intumescentSeal.notes}
-              onNotesChange={(value) => handleNotesChange('inspection.intumescentSeal.notes', value)}
-            />
-
-            <DropdownWithNotes 
-              label="Smoke Seal" 
-              options={statusOptions.seals}
-              value={formValues.inspection.smokeSeal.status}
-              onChange={(value) => handleStatusChange('inspection.smokeSeal.status', value)}
-              notes={formValues.inspection.smokeSeal.notes}
-              onNotesChange={(value) => handleNotesChange('inspection.smokeSeal.notes', value)}
-            />
-
-            <DropdownWithNotes 
-              label="Hinges Status" 
-              options={statusOptions.hinges}
-              value={formValues.inspection.hinges.status}
-              onChange={(value) => handleStatusChange('inspection.hinges.status', value)}
-              notes={formValues.inspection.hinges.notes}
-              onNotesChange={(value) => handleNotesChange('inspection.hinges.notes', value)}
-            />
-
-            <DropdownWithNotes 
-              label="Door Closer Status" 
-              options={statusOptions.doorCloser}
-              value={formValues.inspection.doorCloser.status}
-              onChange={(value) => handleStatusChange('inspection.doorCloser.status', value)}
-              notes={formValues.inspection.doorCloser.notes}
-              onNotesChange={(value) => handleNotesChange('inspection.doorCloser.notes', value)}
-            />
-
-            <DropdownWithNotes 
-              label="Hardware Status" 
-              options={statusOptions.hardware}
-              value={formValues.inspection.hardware.status}
-              onChange={(value) => handleStatusChange('inspection.hardware.status', value)}
-              notes={formValues.inspection.hardware.notes}
-              onNotesChange={(value) => handleNotesChange('inspection.hardware.notes', value)}
-            />
-
-            <DropdownWithNotes 
-              label="Door Tag Status" 
-              options={statusOptions.doorTag}
-              value={formValues.inspection.fireTag.status}
-              onChange={(value) => handleStatusChange('inspection.fireTag.status', value)}
-              notes={formValues.inspection.fireTag.notes}
-              onNotesChange={(value) => handleNotesChange('inspection.fireTag.notes', value)}
-            />
-
-            <DropdownWithNotes 
-              label="Door Indicator Status" 
-              options={statusOptions.doorIndicator}
-              value={formValues.inspection.doorSignage.status}
-              onChange={(value) => handleStatusChange('inspection.doorSignage.status', value)}
-              notes={formValues.inspection.doorSignage.notes}
-              onNotesChange={(value) => handleNotesChange('inspection.doorSignage.notes', value)}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Photos Section */}
-      <div className="bg-white rounded-lg shadow">
-        <SectionHeader 
-          title="Photos" 
-          section="photos"
-          isExpanded={expandedSections.photos}
-          onToggle={() => toggleSection('photos')}
-        />
-        {expandedSections.photos && (
-          <div className="p-6">
-            <div className="mb-6">
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  id="photo-upload"
-                  onChange={(e) => handlePhotoUpload(e.target.files)}
-                />
-                <label htmlFor="photo-upload" className="cursor-pointer">
-                  <Camera className="mx-auto h-12 w-12 text-gray-400" />
-                  <p className="mt-2 text-sm text-gray-600">Click to upload photos or use camera</p>
-                </label>
-              </div>
-            </div>
-
-            {formValues.photos.length > 0 && (
-              <div className="grid grid-cols-2 gap-4">
-                {formValues.photos.map((photo, index) => (
-                  <div key={index} className="border rounded p-4">
-                    <img 
-                      src={photo.file_path} 
-                      alt={photo.description || `Photo ${index + 1}`}
-                      className="w-full h-48 object-cover rounded mb-2"
-                    />
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Photo {index + 1}</span>
-                      <button
-                        className="text-red-600 hover:text-red-800"
-                        onClick={() => handlePhotoDelete(index)}
-                      >
-                        Delete
-                      </button>
+                  <div className="md:col-span-3">
+                    <div className="flex items-center space-x-2">
+                      <input 
+                        type="checkbox"
+                        className="rounded"
+                        checked={formValues.secondLeafDimensions?.hasVisionPanel}
+                        onChange={(e) => handleInputChange('secondLeafDimensions', {
+                          ...formValues.secondLeafDimensions ?? {
+                            width: '',
+                            height: '',
+                            thickness: '',
+                            hasVisionPanel: false,
+                            visionPanelMaterial: 'clear',
+                            visionPanel: { width: '', height: '' }
+                          },
+                          hasVisionPanel: e.target.checked
+                        })}
+                      />
+                      <label>Vision Panel</label>
                     </div>
-                    <input
-                      type="text"
-                      className="w-full p-2 border rounded"
-                      placeholder="Photo description..."
-                      value={photo.description}
-                      onChange={(e) => {
-                        const newPhotos = formValues.photos.map((p, i) => 
-                          i === index 
-                            ? { ...p, description: e.target.value }
-                            : p
-                        );
-                        setFormValues(prev => ({
-                          ...prev,
-                          photos: newPhotos
-                        }));
-                      }}
-                    />
                   </div>
-                ))}
-              </div>
+                </div>
+
+                {formValues.secondLeafDimensions?.hasVisionPanel && (
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Width (mm)</label>
+                      <input 
+                        type="number"
+                        className="w-full p-2 border rounded"
+                        value={formValues.secondLeafDimensions?.visionPanel?.width ?? ''}
+                        onWheel={preventScroll}
+                        onKeyDown={(e) => handleNumberInput(e)}
+                        onChange={(e) => {
+                          const currentDimensions = formValues.secondLeafDimensions ?? {
+                            width: '',
+                            height: '',
+                            thickness: '',
+                            hasVisionPanel: true,
+                            visionPanelMaterial: 'clear',
+                            visionPanel: { width: '', height: '' }
+                          };
+                          handleInputChange('secondLeafDimensions', {
+                            ...currentDimensions,
+                            visionPanel: {
+                              ...currentDimensions.visionPanel,
+                              width: e.target.value
+                            }
+                          });
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Height (mm)</label>
+                      <input 
+                        type="number"
+                        className="w-full p-2 border rounded"
+                        value={formValues.secondLeafDimensions?.visionPanel?.height ?? ''}
+                        onWheel={preventScroll}
+                        onKeyDown={(e) => handleNumberInput(e)}
+                        onChange={(e) => {
+                          const currentDimensions = formValues.secondLeafDimensions ?? {
+                            width: '',
+                            height: '',
+                            thickness: '',
+                            hasVisionPanel: true,
+                            visionPanelMaterial: 'clear',
+                            visionPanel: { width: '', height: '' }
+                          };
+                          handleInputChange('secondLeafDimensions', {
+                            ...currentDimensions,
+                            visionPanel: {
+                              ...currentDimensions.visionPanel,
+                              height: e.target.value
+                            }
+                          });
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Material</label>
+                      <select
+                        className="w-full p-2 border rounded"
+                        value={formValues.secondLeafDimensions?.visionPanelMaterial ?? 'clear'}
+                        onChange={(e) => {
+                          const currentDimensions = formValues.secondLeafDimensions ?? {
+                            width: '',
+                            height: '',
+                            thickness: '',
+                            hasVisionPanel: true,
+                            visionPanelMaterial: 'clear',
+                            visionPanel: { width: '', height: '' }
+                          };
+                          handleInputChange('secondLeafDimensions', {
+                            ...currentDimensions,
+                            visionPanelMaterial: e.target.value
+                          });
+                        }}
+                      >
+                        <option value="clear">Clear</option>
+                        <option value="mesh">With Mesh</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
-            <div className="mt-4">
-              <label className="block text-sm font-medium mb-1">Additional Notes</label>
-              <textarea
-                className="w-full p-2 border rounded"
-                rows={3}
-                value={formValues.additionalNotes}
-                onChange={(e) => handleInputChange('additionalNotes', e.target.value)}
-                placeholder="Any additional notes about the photos or general observations..."
-              />
+            {/* Gap Measurements - moved to end */}
+            <h3 className="font-semibold mb-4 mt-6">Gap Measurements (mm)</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium mb-1">Top Gap</label>
+                <input 
+                  type="number"
+                  step="0.1"
+                  className="w-full p-2 border rounded"
+                  value={formValues.gaps.top ?? ''}
+                  onWheel={preventScroll}
+                  onKeyDown={(e) => handleNumberInput(e)}
+                  onChange={(e) => handleInputChange('gaps', {
+                    ...formValues.gaps,
+                    top: e.target.value ? parseFloat(e.target.value) : null
+                  })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Bottom Gap</label>
+                <input 
+                  type="number"
+                  step="0.1"
+                  className="w-full p-2 border rounded"
+                  value={formValues.gaps.bottom ?? ''}
+                  onWheel={preventScroll}
+                  onKeyDown={(e) => handleNumberInput(e)}
+                  onChange={(e) => handleInputChange('gaps', {
+                    ...formValues.gaps,
+                    bottom: e.target.value ? parseFloat(e.target.value) : null
+                  })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Left Side Gap</label>
+                <input 
+                  type="number"
+                  step="0.1"
+                  className="w-full p-2 border rounded"
+                  value={formValues.gaps.leftSide ?? ''}
+                  onWheel={preventScroll}
+                  onKeyDown={(e) => handleNumberInput(e)}
+                  onChange={(e) => handleInputChange('gaps', {
+                    ...formValues.gaps,
+                    leftSide: e.target.value ? parseFloat(e.target.value) : null
+                  })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Right Side Gap</label>
+                <input 
+                  type="number"
+                  step="0.1"
+                  className="w-full p-2 border rounded"
+                  value={formValues.gaps.rightSide ?? ''}
+                  onWheel={preventScroll}
+                  onKeyDown={(e) => handleNumberInput(e)}
+                  onChange={(e) => handleInputChange('gaps', {
+                    ...formValues.gaps,
+                    rightSide: e.target.value ? parseFloat(e.target.value) : null
+                  })}
+                />
+              </div>
+
+              {formValues.doorType === 'double' && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">In-Between Gap</label>
+                  <input 
+                    type="number"
+                    step="0.1"
+                    className="w-full p-2 border rounded"
+                    value={formValues.gaps.inBetween ?? ''}
+                    onWheel={preventScroll}
+                    onKeyDown={(e) => handleNumberInput(e)}
+                    onChange={(e) => handleInputChange('gaps', {
+                      ...formValues.gaps,
+                      inBetween: e.target.value ? parseFloat(e.target.value) : null
+                    })}
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Protrusion from Frame</label>
+                <input 
+                  type="number"
+                  step="0.1"
+                  className="w-full p-2 border rounded"
+                  value={formValues.gaps.protrusion ?? ''}
+                  onWheel={preventScroll}
+                  onKeyDown={(e) => handleNumberInput(e, true, true)}
+                  onChange={(e) => handleInputChange('gaps', {
+                    ...formValues.gaps,
+                    protrusion: e.target.value ? parseFloat(e.target.value) : null
+                  })}
+                />
+              </div>
             </div>
           </div>
         )}
@@ -1543,6 +1470,41 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
         />
         {expandedSections.buildingFeatures && (
           <div className="p-6 space-y-6">
+            {/* Door Materials - moved to top */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Door Leaf Material</label>
+                <select
+                  className="w-full p-2 border rounded"
+                  value={formValues.buildingFeatures.doorLeafMaterial || ''}
+                  onChange={(e) => handleInputChange('buildingFeatures', {
+                    ...formValues.buildingFeatures,
+                    doorLeafMaterial: e.target.value
+                  })}
+                >
+                  <option value="">Select material...</option>
+                  <option value="Timber">Timber</option>
+                  <option value="Steel">Steel</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Door Frame Material</label>
+                <select
+                  className="w-full p-2 border rounded"
+                  value={formValues.buildingFeatures.doorFrameMaterial || ''}
+                  onChange={(e) => handleInputChange('buildingFeatures', {
+                    ...formValues.buildingFeatures,
+                    doorFrameMaterial: e.target.value
+                  })}
+                >
+                  <option value="">Select material...</option>
+                  <option value="Timber">Timber</option>
+                  <option value="Steel">Steel</option>
+                </select>
+              </div>
+            </div>
+
             {/* Security Features */}
             <div className="space-y-4">
               <h3 className="font-semibold">Security Features</h3>
@@ -1569,11 +1531,11 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                   </label>
                 ))}
               </div>
-              {formValues.buildingFeatures.security.features.includes('More') && (
+              {formValues.buildingFeatures.security.features.includes('Other') && (
                 <input
                   type="text"
                   className="w-full p-2 border rounded"
-                  placeholder="Please specify additional security features..."
+                  placeholder="Please specify other security features..."
                   value={formValues.buildingFeatures.security.moreDetails || ''}
                   onChange={(e) => handleInputChange('buildingFeatures', {
                     ...formValues.buildingFeatures,
@@ -1703,29 +1665,21 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
 
               <div>
                 <label className="block text-sm font-medium mb-1">Floor Finish</label>
-                <div className="space-y-2">
-                  {buildingOptions.floorFinish.map(finish => (
-                    <label key={finish} className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={formValues.buildingFeatures.floor.finish.includes(finish)}
-                        onChange={(e) => {
-                          const newFinishes = e.target.checked
-                            ? [...formValues.buildingFeatures.floor.finish, finish]
-                            : formValues.buildingFeatures.floor.finish.filter(f => f !== finish);
-                          handleInputChange('buildingFeatures', {
-                            ...formValues.buildingFeatures,
-                            floor: {
-                              ...formValues.buildingFeatures.floor,
-                              finish: newFinishes
-                            }
-                          });
-                        }}
-                      />
-                      {finish}
-                    </label>
+                <select
+                  className="w-full p-2 border rounded"
+                  value={formValues.buildingFeatures.floor.finish[0] || ''}
+                  onChange={(e) => handleInputChange('buildingFeatures', {
+                    ...formValues.buildingFeatures,
+                    floor: {
+                      ...formValues.buildingFeatures.floor,
+                      finish: e.target.value ? [e.target.value] : []
+                    }
+                  })}
+                >
+                  {buildingOptions.floorFinish.map(option => (
+                    <option key={option} value={option}>{option}</option>
                   ))}
-                </div>
+                </select>
                 {formValues.buildingFeatures.floor.finish.includes('Other') && (
                   <input
                     type="text"
@@ -1743,112 +1697,213 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                 )}
               </div>
             </div>
-
-            {/* Additional Notes */}
-            <div>
-              <label className="block text-sm font-medium mb-1">Additional Notes</label>
-              <textarea
-                className="w-full p-2 border rounded"
-                rows={3}
-                value={formValues.buildingFeatures.notes}
-                onChange={(e) => handleInputChange('buildingFeatures', {
-                  ...formValues.buildingFeatures,
-                  notes: e.target.value
-                })}
-                placeholder="Any additional notes about building features..."
-              />
-            </div>
           </div>
         )}
       </div>
 
-      {/* Door Architrave Section */}
+      {/* Inspection Checklist Section */}
       <div className="bg-white rounded-lg shadow">
         <SectionHeader 
-          title="Door Architrave" 
-          section="doorArchitrave"
-          isExpanded={expandedSections.doorArchitrave}
-          onToggle={() => toggleSection('doorArchitrave')}
+          title="Inspection Checklist" 
+          section="inspection"
+          isExpanded={expandedSections.inspection}
+          onToggle={() => toggleSection('inspection')}
         />
-        {expandedSections.doorArchitrave && (
+        {expandedSections.inspection && (
           <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Door Architrave</label>
-                <select
-                  className="w-full p-2 border rounded"
-                  value={formValues.doorArchitrave}
-                  onChange={(e) => handleInputChange('doorArchitrave', e.target.value)}
-                >
-                  {siteOptions.doorArchitrave.map(option => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            <DropdownWithNotes 
+              label="Door Leaf" 
+              options={statusOptions.doorLeaf}
+              value={formValues.inspection.doorLeaf.status}
+              onChange={(value) => handleStatusChange('inspection.doorLeaf.status', value)}
+              notes={formValues.inspection.doorLeaf.notes}
+              onNotesChange={(value) => handleNotesChange('inspection.doorLeaf.notes', value)}
+            />
+
+            <DropdownWithNotes 
+              label="Door Frame" 
+              options={statusOptions.doorFrame}
+              value={formValues.inspection.doorFrame.status}
+              onChange={(value) => handleStatusChange('inspection.doorFrame.status', value)}
+              notes={formValues.inspection.doorFrame.notes}
+              onNotesChange={(value) => handleNotesChange('inspection.doorFrame.notes', value)}
+            />
+
+            <DropdownWithNotes 
+              label="Vision Panel" 
+              options={statusOptions.visionPanel}
+              value={formValues.inspection.visionPanel.status}
+              onChange={(value) => handleStatusChange('inspection.visionPanel.status', value)}
+              notes={formValues.inspection.visionPanel.notes}
+              onNotesChange={(value) => handleNotesChange('inspection.visionPanel.notes', value)}
+            />
+
+            <DropdownWithNotes 
+              label="Intumescent Seal" 
+              options={statusOptions.seals}
+              value={formValues.inspection.intumescentSeal.status}
+              onChange={(value) => handleStatusChange('inspection.intumescentSeal.status', value)}
+              notes={formValues.inspection.intumescentSeal.notes}
+              onNotesChange={(value) => handleNotesChange('inspection.intumescentSeal.notes', value)}
+            />
+
+            <DropdownWithNotes 
+              label="Smoke Seal" 
+              options={statusOptions.seals}
+              value={formValues.inspection.smokeSeal.status}
+              onChange={(value) => handleStatusChange('inspection.smokeSeal.status', value)}
+              notes={formValues.inspection.smokeSeal.notes}
+              onNotesChange={(value) => handleNotesChange('inspection.smokeSeal.notes', value)}
+            />
+
+            <DropdownWithNotes 
+              label="Hinges" 
+              options={statusOptions.hinges}
+              value={formValues.inspection.hinges.status}
+              onChange={(value) => handleStatusChange('inspection.hinges.status', value)}
+              notes={formValues.inspection.hinges.notes}
+              onNotesChange={(value) => handleNotesChange('inspection.hinges.notes', value)}
+            />
+
+            <DropdownWithNotes 
+              label="Door Closer" 
+              options={statusOptions.doorCloser}
+              value={formValues.inspection.doorCloser.status}
+              onChange={(value) => handleStatusChange('inspection.doorCloser.status', value)}
+              notes={formValues.inspection.doorCloser.notes}
+              onNotesChange={(value) => handleNotesChange('inspection.doorCloser.notes', value)}
+            />
+
+            <DropdownWithNotes 
+              label="Hardware" 
+              options={statusOptions.hardware}
+              value={formValues.inspection.hardware.status}
+              onChange={(value) => handleStatusChange('inspection.hardware.status', value)}
+              notes={formValues.inspection.hardware.notes}
+              onNotesChange={(value) => handleNotesChange('inspection.hardware.notes', value)}
+            />
+
+            <DropdownWithNotes 
+              label="Door Tag" 
+              options={statusOptions.doorTag}
+              value={formValues.inspection.fireTag.status}
+              onChange={(value) => handleStatusChange('inspection.fireTag.status', value)}
+              notes={formValues.inspection.fireTag.notes}
+              onNotesChange={(value) => handleNotesChange('inspection.fireTag.notes', value)}
+            />
+
+            <DropdownWithNotes 
+              label="Door Signage" 
+              options={statusOptions.doorIndicator}
+              value={formValues.inspection.doorSignage.status}
+              onChange={(value) => handleStatusChange('inspection.doorSignage.status', value)}
+              notes={formValues.inspection.doorSignage.notes}
+              onNotesChange={(value) => handleNotesChange('inspection.doorSignage.notes', value)}
+            />
           </div>
         )}
       </div>
 
-      {/* Door Material Section */}
+      {/* Photos Section */}
       <div className="bg-white rounded-lg shadow">
         <SectionHeader 
-          title="Door Material" 
-          section="doorMaterial"
-          isExpanded={expandedSections.doorMaterial}
-          onToggle={() => toggleSection('doorMaterial')}
+          title="Photos" 
+          section="photos"
+          isExpanded={expandedSections.photos}
+          onToggle={() => toggleSection('photos')}
         />
-        {expandedSections.doorMaterial && (
+        {expandedSections.photos && (
           <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Door Material</label>
-                <select
-                  className="w-full p-2 border rounded"
-                  value={formValues.doorMaterial.type}
-                  onChange={(e) => handleInputChange('doorMaterial', {
-                    ...formValues.doorMaterial,
-                    type: e.target.value
-                  })}
-                >
-                  {siteOptions.doorMaterial.map(option => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Other Specify</label>
+            <div className="mb-6">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                 <input
-                  type="text"
-                  className="w-full p-2 border rounded"
-                  value={formValues.doorMaterial.otherSpecify}
-                  onChange={(e) => handleInputChange('doorMaterial', {
-                    ...formValues.doorMaterial,
-                    otherSpecify: e.target.value
-                  })}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  id="photo-upload"
+                  onChange={(e) => handlePhotoUpload(e.target.files)}
                 />
+                <label htmlFor="photo-upload" className="cursor-pointer">
+                  <Camera className="mx-auto h-12 w-12 text-gray-400" />
+                  <p className="mt-2 text-sm text-gray-600">Click to upload photos or use camera</p>
+                </label>
               </div>
             </div>
+
+            {formValues.photos.length > 0 && (
+              <div className="grid grid-cols-2 gap-4">
+                {formValues.photos.map((photo, index) => (
+                  <div key={index} className="border rounded p-4">
+                    <img 
+                      src={photo.file_path} 
+                      alt={photo.description || `Photo ${index + 1}`}
+                      className="w-full h-48 object-cover rounded mb-2"
+                    />
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">Photo {index + 1}</span>
+                      <button
+                        className="text-red-600 hover:text-red-800"
+                        onClick={() => handlePhotoDelete(index)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      className="w-full p-2 border rounded"
+                      placeholder="Photo description..."
+                      value={photo.description}
+                      onChange={(e) => {
+                        const newPhotos = formValues.photos.map((p, i) => 
+                          i === index 
+                            ? { ...p, description: e.target.value }
+                            : p
+                        );
+                        setFormValues(prev => ({
+                          ...prev,
+                          photos: newPhotos
+                        }));
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* Submit Buttons */}
-      <div className="flex justify-end gap-4 mt-8">
-        <button 
-          className="px-6 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-          onClick={() => {
-            if (confirm('Are you sure you want to cancel? All changes will be lost.')) {
-              setFormValues(initialFormState);
-            }
-          }}
-        >
-          Cancel
-        </button>
-        <button 
-          className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+      {/* Survey Status Section */}
+      <div className="bg-white rounded-lg shadow p-6 mt-6">
+        <h3 className="font-semibold mb-4">Survey Status</h3>
+        {(() => {
+          const { passed, failures } = getSurveyStatus(formValues);
+          return (
+            <div>
+              <div className={`text-lg font-medium ${passed ? 'text-green-600' : 'text-red-600'}`}>
+                {passed ? 'PASS' : 'FAIL'}
+              </div>
+              {!passed && (
+                <div className="mt-2">
+                  <p className="font-medium mb-2">Issues found:</p>
+                  <ul className="list-disc list-inside text-red-600">
+                    {failures.map((failure, index) => (
+                      <li key={index}>{failure}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* Submit Button */}
+      <div className="flex justify-end">
+        <button
+          className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600"
           onClick={handleSubmit}
-          disabled={!isDirty}
         >
           Submit Survey
         </button>

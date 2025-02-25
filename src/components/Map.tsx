@@ -5,7 +5,7 @@ import L from 'leaflet'
 import { 
   MapContainer as LeafletMap,
   TileLayer as LeafletTileLayer, 
-  Marker as LeafletMarker, 
+  Marker as LeafletMarker,
   useMap,
   useMapEvents
 } from 'react-leaflet'
@@ -28,16 +28,37 @@ interface LocationMarkerProps {
   onPositionChange: (pos: LatLng) => void;
 }
 
-export const DynamicMap = ({ 
-  center, 
-  zoom = 18,
-  children,
-  onLocationSelect
-}: {
-  center: LatLngExpression;
+interface DynamicMapProps {
+  center: [number, number];
+  onLocationSelect: (pos: { lat: number; lng: number }) => void;
+  stopUpdating?: boolean;
   zoom?: number;
-  children: React.ReactNode;
-  onLocationSelect?: (pos: LatLng) => void;
+  children?: React.ReactNode;
+}
+
+// Create a MapController component to handle map updates
+const MapController: React.FC<{ center: [number, number]; stopUpdating: boolean; zoom: number }> = ({ 
+  center, 
+  stopUpdating,
+  zoom 
+}) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!stopUpdating) {
+      map.setView(center, zoom);
+    }
+  }, [center, map, stopUpdating, zoom]);
+
+  return null;
+};
+
+export const DynamicMap: React.FC<DynamicMapProps> = ({ 
+  center, 
+  onLocationSelect, 
+  stopUpdating = false,
+  zoom = 18,
+  children 
 }) => {
   const MapEvents = () => {
     useMapEvents({
@@ -49,10 +70,11 @@ export const DynamicMap = ({
   return (
     <LeafletMap 
       center={center} 
-      zoom={zoom} 
+      zoom={zoom}
       className="h-full w-full"
       style={{ height: '400px', width: '100%' }}
     >
+      <MapController center={center} stopUpdating={stopUpdating} zoom={zoom} />
       <MapEvents />
       <LeafletTileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -60,8 +82,8 @@ export const DynamicMap = ({
       />
       {children}
     </LeafletMap>
-  )
-}
+  );
+};
 
 export const LocationMarker: React.FC<LocationMarkerProps> = ({ position, onPositionChange }) => {
   const map = useMap();

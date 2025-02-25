@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import dynamic from 'next/dynamic'
 
@@ -20,9 +20,53 @@ interface SurveyDetailProps {
   onClose: () => void;
 }
 
+// Add a type for the photo structure
+interface Photo {
+  file_path: string;
+  description: string;
+  timestamp: string;
+}
+
+// Helper function to format value
+const formatValue = (value: any, unit?: string) => {
+  if (!value && value !== 0) return '';
+  return unit ? `${value}${unit}` : value;
+};
+
+// Add type definitions
+const doorTypes = ['single', 'double'] as const;
+const installationTypes = ['interior', 'exterior'] as const;
+
 export const SurveyDetail: React.FC<SurveyDetailProps> = ({ surveyId, onClose }) => {
   const [survey, setSurvey] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  // Single photos useMemo hook
+  const photos = useMemo(() => {
+    if (!survey?.photos) return [];
+    try {
+      const photoData = typeof survey.photos === 'string'
+        ? JSON.parse(survey.photos)
+        : survey.photos;
+      return Array.isArray(photoData) ? photoData : [];
+    } catch (error) {
+      console.warn('Error parsing photos:', error);
+      return [];
+    }
+  }, [survey?.photos]);
+
+  const inspectionResults = useMemo(() => {
+    if (!survey?.inspection_results) return [];
+    try {
+      const results = typeof survey.inspection_results === 'string' 
+        ? JSON.parse(survey.inspection_results) 
+        : survey.inspection_results;
+      return Object.entries(results);
+    } catch (error) {
+      console.warn('Error parsing inspection results:', error);
+      return [];
+    }
+  }, [survey?.inspection_results]);
 
   useEffect(() => {
     const fetchSurvey = async () => {
@@ -34,7 +78,22 @@ export const SurveyDetail: React.FC<SurveyDetailProps> = ({ surveyId, onClose })
           .single();
 
         if (error) throw error;
-        setSurvey(data);
+
+        // Parse JSON fields
+        const parsedData = {
+          ...data,
+          door_closer: JSON.parse(data.door_closer || '{}'),
+          hinges: JSON.parse(data.hinges || '{}'),
+          hardware: JSON.parse(data.hardware || '{}'),
+          leaf_dimensions: JSON.parse(data.leaf_dimensions || '{}'),
+          second_leaf_dimensions: data.second_leaf_dimensions ? JSON.parse(data.second_leaf_dimensions) : null,
+          gaps: JSON.parse(data.gaps || '{}'),
+          building_features: JSON.parse(data.building_features || '{}'),
+          inspection_results: JSON.parse(data.inspection_results || '{}'),
+          photos: JSON.parse(data.photos || '[]')
+        };
+
+        setSurvey(parsedData);
       } catch (error) {
         console.error('Error fetching survey:', error);
       } finally {
@@ -51,26 +110,30 @@ export const SurveyDetail: React.FC<SurveyDetailProps> = ({ surveyId, onClose })
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold">Survey Details</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-xl">
-            ×
-          </button>
-        </div>
+        {loading ? (
+          <div className="flex justify-center items-center h-32">
+            <p>Loading survey details...</p>
+          </div>
+        ) : (
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold">Survey Details</h2>
+            <div className="flex items-center gap-4">
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                survey.pass_fail ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+              }`}>
+                {survey.pass_fail ? 'PASS' : 'FAIL'}
+              </span>
+              <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-xl">×</button>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-6">
           {/* Location Details */}
           <section className="border-b pb-4">
             <h3 className="text-lg font-semibold mb-2">Location Details</h3>
             <div className="space-y-4">
-              <p><span className="font-medium">Name:</span> {survey.location_name || '-'}</p>
-              <div className="h-[300px]">
-                <DynamicMap 
-                  center={[survey.coordinates?.lat || -41.2865, survey.coordinates?.lng || 174.7762]}
-                >
-                  <LeafletMarker position={[survey.coordinates?.lat || -41.2865, survey.coordinates?.lng || 174.7762]} />
-                </DynamicMap>
-              </div>
+              <p><span className="font-medium">Name:</span> {survey.location_name}</p>
             </div>
           </section>
 
@@ -78,12 +141,18 @@ export const SurveyDetail: React.FC<SurveyDetailProps> = ({ surveyId, onClose })
           <section className="border-b pb-4">
             <h3 className="text-lg font-semibold mb-2">Door Details</h3>
             <div className="grid grid-cols-2 gap-4">
-              <p><span className="font-medium">Type:</span> {survey.door_type || '-'}</p>
-              <p><span className="font-medium">Installation:</span> {survey.installation_type || '-'}</p>
-              <p><span className="font-medium">Manufacturer:</span> {survey.manufacturer || '-'}</p>
-              <p><span className="font-medium">Doorset Number:</span> {survey.doorset_number || '-'}</p>
-              <p><span className="font-medium">Date Installed:</span> {survey.date_installed || '-'}</p>
-              <p><span className="font-medium">Fire Rating:</span> {survey.fire_rating || '-'}</p>
+              <p>
+                <span className="font-medium">Type:</span>{' '}
+                {survey.door_type?.charAt(0).toUpperCase() + survey.door_type?.slice(1)}
+              </p>
+              <p>
+                <span className="font-medium">Installation:</span>{' '}
+                {survey.installation_type?.charAt(0).toUpperCase() + survey.installation_type?.slice(1)}
+              </p>
+              <p><span className="font-medium">Manufacturer:</span> {survey.manufacturer}</p>
+              <p><span className="font-medium">Doorset Number:</span> {survey.doorset_number}</p>
+              <p><span className="font-medium">Date Installed:</span> {survey.date_installed}</p>
+              <p><span className="font-medium">Fire Rating:</span> {survey.fire_rating}</p>
             </div>
           </section>
 
@@ -91,111 +160,103 @@ export const SurveyDetail: React.FC<SurveyDetailProps> = ({ surveyId, onClose })
           <section className="border-b pb-4">
             <h3 className="text-lg font-semibold mb-2">Components & Hardware</h3>
             <div className="grid grid-cols-2 gap-4">
-              <p><span className="font-medium">Door Closer Manufacturer:</span> {survey.door_closer_manufacturer || '-'}</p>
-              <p><span className="font-medium">Number of Hinges:</span> {survey.num_hinges || '-'}</p>
-              <p><span className="font-medium">Hardware Supplier:</span> {survey.hardware_supplier || '-'}</p>
+              <div>
+                <h4 className="font-medium">Door Closer</h4>
+                <p>Brand: {survey.door_closer?.brand}</p>
+                <p>CE Marking: {survey.door_closer?.ceMarking ? 'Yes' : 'No'}</p>
+              </div>
+              <div>
+                <h4 className="font-medium">Hinges</h4>
+                <p>Number of Sets: {survey.hinges?.numSets}</p>
+                <p>Brand: {survey.hinges?.brand}</p>
+                <p>CE Marking: {survey.hinges?.ceMarking ? 'Yes' : 'No'}</p>
+              </div>
+              <div>
+                <h4 className="font-medium">Door Handle, Locks, and Latches</h4>
+                <p>Brand: {survey.hardware?.brand}</p>
+                <p>CE Marking: {survey.hardware?.ceMarking ? 'Yes' : 'No'}</p>
+              </div>
             </div>
           </section>
 
           {/* Dimensions */}
           <section className="border-b pb-4">
             <h3 className="text-lg font-semibold mb-2">Dimensions</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Standard Gaps:</span> {survey.has_standard_gaps ? 'Yes' : 'No'}</p>
-              {survey.gaps_notes && (
-                <p><span className="font-medium">Gaps Notes:</span> {survey.gaps_notes}</p>
-              )}
-              
-              <h4 className="font-medium mt-2">Leaf Dimensions</h4>
-              <div className="grid grid-cols-3 gap-4 ml-4">
-                <p>Width: {survey.leaf_dimensions?.width || '-'} mm</p>
-                <p>Height: {survey.leaf_dimensions?.height || '-'} mm</p>
-                <p>Thickness: {survey.leaf_dimensions?.thickness || '-'} mm</p>
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium">Leaf Dimensions</h4>
+                <div className="grid grid-cols-3 gap-4 ml-4">
+                  <p>Width: {formatValue(survey.leaf_dimensions?.width, ' mm')}</p>
+                  <p>Height: {formatValue(survey.leaf_dimensions?.height, ' mm')}</p>
+                  <p>Thickness: {formatValue(survey.leaf_dimensions?.thickness, ' mm')}</p>
+                </div>
               </div>
 
               {survey.leaf_dimensions?.hasVisionPanel && (
-                <>
-                  <h4 className="font-medium mt-2">Vision Panel</h4>
+                <div>
+                  <h4 className="font-medium">Vision Panel</h4>
                   <div className="grid grid-cols-3 gap-4 ml-4">
-                    <p>Width: {survey.leaf_dimensions.visionPanel?.width || '-'} mm</p>
-                    <p>Height: {survey.leaf_dimensions.visionPanel?.height || '-'} mm</p>
-                    <p>Material: {survey.leaf_dimensions.visionPanelMaterial || '-'}</p>
+                    <p>Width: {formatValue(survey.leaf_dimensions.visionPanel?.width, ' mm')}</p>
+                    <p>Height: {formatValue(survey.leaf_dimensions.visionPanel?.height, ' mm')}</p>
+                    <p>Material: {survey.leaf_dimensions.visionPanelMaterial}</p>
                   </div>
-                </>
+                </div>
               )}
+
+              <div>
+                <h4 className="font-medium">Gap Measurements</h4>
+                <div className="grid grid-cols-3 gap-4 ml-4">
+                  <p>Top: {formatValue(survey.gaps?.top, ' mm')}</p>
+                  <p>Bottom: {formatValue(survey.gaps?.bottom, ' mm')}</p>
+                  <p>Left Side: {formatValue(survey.gaps?.leftSide, ' mm')}</p>
+                  <p>Right Side: {formatValue(survey.gaps?.rightSide, ' mm')}</p>
+                  <p>In-Between: {formatValue(survey.gaps?.inBetween, ' mm')}</p>
+                  <p>Protrusion: {formatValue(survey.gaps?.protrusion, ' mm')}</p>
+                </div>
+              </div>
             </div>
           </section>
 
           {/* Inspection Results */}
           <section className="border-b pb-4">
             <h3 className="text-lg font-semibold mb-2">Inspection Results</h3>
-            <div className="grid grid-cols-1 gap-2">
-              {Object.entries(survey.inspection_results || {}).map(([key, value]: [string, any]) => (
-                <div key={key} className="border-b last:border-0 py-2">
-                  <p className="font-medium">
-                    {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                  </p>
-                  <div className="ml-4">
-                    <p>Status: {value?.status || '-'}</p>
-                    {value?.notes && <p className="text-gray-600">Notes: {value.notes}</p>}
+            <div className="grid grid-cols-1 gap-4">
+              {inspectionResults.map(([key, value]: [string, any]) => {
+                if (!value.status.length && !value.notes) return null;
+                return (
+                  <div key={key} className="border-b last:border-0 py-2">
+                    <p className="font-medium">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
+                    {value.status.length > 0 && (
+                      <p className="ml-4">Issues: {value.status.join(', ')}</p>
+                    )}
+                    {value.notes && (
+                      <p className="ml-4 text-gray-600">Notes: {value.notes}</p>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
 
           {/* Photos */}
-          {survey.photos?.length > 0 && (
+          {photos.length > 0 && (
             <section className="border-b pb-4">
               <h3 className="text-lg font-semibold mb-2">Photos</h3>
               <div className="grid grid-cols-2 gap-4">
-                {survey.photos.map((photo: any, index: number) => (
+                {photos.map((photo: Photo, index: number) => (
                   <div key={index} className="border p-2 rounded">
                     <img 
-                      src={photo.file_path} 
+                      src={photo.file_path}  // Use the URL directly
                       alt={photo.description || `Photo ${index + 1}`}
-                      className="w-full h-48 object-cover rounded mb-2"
+                      className="w-full h-48 object-cover rounded"
+                      onError={(e) => {
+                        e.currentTarget.src = '/placeholder-image.png';
+                        console.error('Error loading image:', photo.file_path);
+                      }}
                     />
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-medium">Photo {index + 1}</p>
-                        <p className="text-sm text-gray-600">{photo.description || 'No description'}</p>
-                        <p className="text-sm text-gray-500">
-                          Taken: {new Date(photo.timestamp).toLocaleString()}
-                        </p>
-                      </div>
-                      <button
-                        onClick={async () => {
-                          if (!confirm('Are you sure you want to delete this photo?')) return;
-                          try {
-                            // Delete from storage
-                            const fileName = photo.file_path.split('/').pop();
-                            if (fileName) {
-                              await supabase.storage
-                                .from('fire-door-photos')
-                                .remove([fileName]);
-                            }
-                            // Update survey record
-                            const newPhotos = survey.photos.filter((_: any, i: number) => i !== index);
-                            const { error } = await supabase
-                              .from('fire_door_surveys')
-                              .update({ photos: newPhotos })
-                              .eq('id', survey.id);
-                            
-                            if (error) throw error;
-                            
-                            // Update local state
-                            setSurvey({ ...survey, photos: newPhotos });
-                          } catch (error) {
-                            console.error('Error deleting photo:', error);
-                            alert('Error deleting photo');
-                          }
-                        }}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        Delete
-                      </button>
-                    </div>
+                    {photo.description && (
+                      <p className="mt-2 text-sm text-gray-600">{photo.description}</p>
+                    )}
                   </div>
                 ))}
               </div>

@@ -11,6 +11,7 @@ interface Survey {
   door_type: string
   installation_type: string
   fire_rating: string
+  pass_fail: boolean
 }
 
 interface SurveyListProps {
@@ -28,8 +29,9 @@ export const SurveyList: React.FC<SurveyListProps> = ({ refreshTrigger }) => {
       try {
         const { data, error } = await supabase
           .from('fire_door_surveys')
-          .select('id, created_at, location_name, door_type, installation_type, fire_rating')
+          .select('*')
           .order('created_at', { ascending: false })
+          .limit(10)
 
         if (error) throw error
         setSurveys(data || [])
@@ -53,7 +55,15 @@ export const SurveyList: React.FC<SurveyListProps> = ({ refreshTrigger }) => {
         .eq('id', id);
 
       if (error) throw error;
-      setSurveys(surveys.filter(s => s.id !== id));
+      
+      // Refresh the list after deletion
+      const { data: newData } = await supabase
+        .from('fire_door_surveys')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
+        
+      setSurveys(newData || []);
     } catch (error) {
       console.error('Error deleting survey:', error);
       alert('Error deleting survey');
@@ -74,6 +84,7 @@ export const SurveyList: React.FC<SurveyListProps> = ({ refreshTrigger }) => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Door Type</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Installation</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fire Rating</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
@@ -98,6 +109,11 @@ export const SurveyList: React.FC<SurveyListProps> = ({ refreshTrigger }) => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {survey.fire_rating}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <span className={`px-2 py-1 rounded ${survey.pass_fail ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    {survey.pass_fail ? 'PASS' : 'FAIL'}
+                  </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   <button
