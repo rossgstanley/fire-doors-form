@@ -4,12 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ChevronDown, ChevronUp, Camera, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { DynamicMap, LocationMarker } from './Map';
 
 interface DropdownWithNotesProps {
   label: string;
   options: string[];
-  value: string;
-  onChange: (value: string) => void;
+  value: string[];
+  onChange: (value: string[]) => void;
   notes: string;
   onNotesChange: (value: string) => void;
 }
@@ -19,15 +20,23 @@ const DropdownWithNotes = ({ label, options, value, onChange, notes, onNotesChan
   <div className="mb-4">
     <label className="block text-sm font-medium mb-1">{label}</label>
     <div className="flex gap-2">
-      <select 
-        className="w-1/2 p-2 border rounded"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
+      <div className="w-1/2 p-2 border rounded">
         {options.map(option => (
-          <option key={option} value={option}>{option}</option>
+          <label key={option} className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={value.includes(option)}
+              onChange={(e) => {
+                const newValue = e.target.checked
+                  ? [...value, option]
+                  : value.filter(v => v !== option);
+                onChange(newValue);
+              }}
+            />
+            {option}
+          </label>
         ))}
-      </select>
+      </div>
       <input
         type="text"
         className="w-1/2 p-2 border rounded"
@@ -62,23 +71,45 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
 );
 
 // Add at the top with other interfaces
-type SectionName = 'location' | 'doorDetails' | 'components' | 'dimensions' | 'inspection' | 'photos';
+type SectionName = 'location' | 'doorDetails' | 'components' | 'dimensions' | 'inspection' | 'photos' | 'siteConditions' | 'doorArchitrave' | 'doorMaterial' | 'buildingFeatures';
+
+// First update the FormValues interface for inspection items
+interface InspectionItem {
+  status: string[];  // Always an array, ['OK'] for passing state
+  notes: string;
+}
 
 // Add at the top with other interfaces
 interface FormValues {
   locationName: string;
-  locationId: string;
+  coordinates: {
+    lat: number;
+    lng: number;
+  };
   doorType: string;
   installationType: string;
   manufacturer: string;
   doorsetNumber: string;
-  dateInstalled: string;
-  fireRating: string;
+  dateInstalled: {
+    day: string;
+    month: string;
+    year: string;
+  };
+  fireRating: {
+    integrity: string;
+    insulation: string;
+  };
   doorCloserManufacturer: string;
   numHinges: number;
   hardwareSupplier: string;
   hasStandardGaps: boolean;
-  gapsNotes: string;
+  hasStandardBottomGap: boolean;
+  gapsNotes: {
+    top: string;
+    sides: string;
+    bottom: string;
+    meetingStile?: string;
+  };
   leafDimensions: {
     width: string;
     height: string;
@@ -90,22 +121,118 @@ interface FormValues {
       height: string;
     };
   };
-  doorLeaf: { status: string; notes: string };
-  doorFrame: { status: string; notes: string };
-  visionPanel: { status: string; notes: string };
-  intumescentSeal: { status: string; notes: string };
-  smokeSeal: { status: string; notes: string };
-  hinges: { status: string; notes: string };
-  doorCloser: { status: string; notes: string };
-  hardware: { status: string; notes: string };
-  doorTag: { status: string; notes: string };
-  doorIndicator: { status: string; notes: string };
+  doorLeaf: { status: string[], notes: string };
+  doorFrame: { status: string[], notes: string };
+  visionPanel: { status: string[], notes: string };
+  intumescentSeal: { status: string[], notes: string };
+  smokeSeal: { status: string[], notes: string };
+  hinges: {
+    numSets: number;
+    brand: string;
+    ceMarking: boolean;
+    status: string[];
+    notes: string;
+  };
+  doorCloser: {
+    brand: string;
+    ceMarking: boolean;
+    status: string[];
+    notes: string;
+  };
+  hardware: {
+    brand: string;
+    ceMarking: boolean;
+    status: string[];
+    notes: string;
+  };
+  doorTag: { status: string[], notes: string };
+  doorIndicator: { status: string[], notes: string };
   photos: Array<{
     file_path: string;
     description: string;
     timestamp: string;
   }>;
   additionalNotes: string;
+  siteConditions: {
+    securityFeatures: {
+      type: string;
+      otherSpecify?: string;
+    };
+    wallSubstrate: {
+      type: string;
+      otherSpecify?: string;
+    };
+    wallFinish: {
+      type: string;
+      otherSpecify?: string;
+    };
+    floorSurface: string;
+    floorFinish: string[];
+  };
+  doorArchitrave: string;
+  doorMaterial: {
+    type: string;
+    otherSpecify?: string;
+  };
+  secondLeafDimensions?: {
+    width: string;
+    height: string;
+    thickness: string;
+    hasVisionPanel: boolean;
+    visionPanelMaterial: string;
+    visionPanel: {
+      width: string;
+      height: string;
+    };
+  };
+  gaps: {
+    top: number | null;
+    bottom: number | null;
+    leftSide: number | null;
+    rightSide: number | null;
+    inBetween: number | null;
+    protrusion: number | null;
+  };
+  buildingFeatures: {
+    security: {
+      features: string[];
+      moreDetails?: string;
+    };
+    wall: {
+      substrate: string;
+      substrateOther?: string;
+      finish: string;
+      finishOther?: string;
+      architrave: string;
+    };
+    floor: {
+      surface: string;
+      finish: string[];
+      finishOther?: string;
+    };
+    notes: string;
+  };
+  inspection: {
+    doorLeaf: InspectionItem;
+    doorLeafMaterial: InspectionItem;
+    doorFrame: InspectionItem;
+    doorFrameMaterial: InspectionItem;
+    visionPanel: InspectionItem;
+    intumescentSeal: InspectionItem;
+    smokeSeal: InspectionItem;
+    hinges: InspectionItem;
+    doorCloser: InspectionItem & {
+      slowClosing: boolean;  // Takes more than 25 seconds to close
+    };
+    hardware: InspectionItem & {
+      rattling: boolean;  // Does not firmly close without rattling
+    };
+    fireTag: InspectionItem;
+    doorSignage: InspectionItem & {
+      oneSideOnly: boolean;  // One side only but required on both
+      notNZS4520: boolean;  // Not in accordance with NZS 4520
+    };
+  };
 }
 
 type FormField = keyof FormValues;
@@ -136,7 +263,11 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
     components: true,
     dimensions: true,
     inspection: true,
-    photos: true
+    photos: true,
+    siteConditions: true,
+    doorArchitrave: true,
+    doorMaterial: true,
+    buildingFeatures: true
   });
 
   // Door type state
@@ -145,18 +276,23 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
   // Add these near the top of the component
   const initialFormState: FormValues = {
     locationName: '',
-    locationId: '',
+    coordinates: { lat: -41.2865, lng: 174.7762 },
     doorType: 'single',
     installationType: 'interior',
     manufacturer: '',
     doorsetNumber: '',
-    dateInstalled: '',
-    fireRating: '',
+    dateInstalled: { day: '', month: '', year: '' },
+    fireRating: { integrity: '', insulation: '' },
     doorCloserManufacturer: '',
     numHinges: 0,
     hardwareSupplier: '',
     hasStandardGaps: false,
-    gapsNotes: '',
+    hasStandardBottomGap: false,
+    gapsNotes: {
+      top: '',
+      sides: '',
+      bottom: '',
+    },
     leafDimensions: {
       width: '',
       height: '',
@@ -165,18 +301,85 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
       visionPanelMaterial: 'clear',
       visionPanel: { width: '', height: '' }
     },
-    doorLeaf: { status: 'OK', notes: '' },
-    doorFrame: { status: 'OK', notes: '' },
-    visionPanel: { status: 'OK', notes: '' },
-    intumescentSeal: { status: 'OK', notes: '' },
-    smokeSeal: { status: 'OK', notes: '' },
-    hinges: { status: 'OK', notes: '' },
-    doorCloser: { status: 'OK', notes: '' },
-    hardware: { status: 'OK', notes: '' },
-    doorTag: { status: 'OK', notes: '' },
-    doorIndicator: { status: 'OK', notes: '' },
+    doorLeaf: { status: [], notes: '' },
+    doorFrame: { status: [], notes: '' },
+    visionPanel: { status: [], notes: '' },
+    intumescentSeal: { status: [], notes: '' },
+    smokeSeal: { status: [], notes: '' },
+    hinges: {
+      numSets: 0,
+      brand: '',
+      ceMarking: false,
+      status: [],
+      notes: ''
+    },
+    doorCloser: {
+      brand: '',
+      ceMarking: false,
+      status: [],
+      notes: ''
+    },
+    hardware: {
+      brand: '',
+      ceMarking: false,
+      status: [],
+      notes: ''
+    },
+    doorTag: { status: [], notes: '' },
+    doorIndicator: { status: [], notes: '' },
     photos: [],
-    additionalNotes: ''
+    additionalNotes: '',
+    siteConditions: {
+      securityFeatures: { type: 'Ordinary Lockset' },
+      wallSubstrate: { type: 'Masonry' },
+      wallFinish: { type: 'Painted' },
+      floorSurface: 'Leveled',
+      floorFinish: []
+    },
+    doorArchitrave: 'With',
+    doorMaterial: { type: 'Timber Leaf and Timber Frame' },
+    secondLeafDimensions: undefined,
+    gaps: {
+      top: null,
+      bottom: null,
+      leftSide: null,
+      rightSide: null,
+      inBetween: null,
+      protrusion: null
+    },
+    buildingFeatures: {
+      security: {
+        features: [],
+        moreDetails: ''
+      },
+      wall: {
+        substrate: 'Masonry',
+        substrateOther: '',
+        finish: 'Painted',
+        finishOther: '',
+        architrave: 'With'
+      },
+      floor: {
+        surface: 'Leveled',
+        finish: [],
+        finishOther: ''
+      },
+      notes: ''
+    },
+    inspection: {
+      doorLeaf: { status: ['OK'], notes: '' },
+      doorLeafMaterial: { status: ['OK'], notes: '' },
+      doorFrame: { status: ['OK'], notes: '' },
+      doorFrameMaterial: { status: ['OK'], notes: '' },
+      visionPanel: { status: ['OK'], notes: '' },
+      intumescentSeal: { status: ['OK'], notes: '' },
+      smokeSeal: { status: ['OK'], notes: '' },
+      hinges: { status: ['OK'], notes: '' },
+      doorCloser: { status: ['OK'], notes: '', slowClosing: false },
+      hardware: { status: ['OK'], notes: '', rattling: false },
+      fireTag: { status: ['OK'], notes: '' },
+      doorSignage: { status: ['OK'], notes: '', oneSideOnly: false, notNZS4520: false }
+    },
   };
 
   // Add state to track form changes
@@ -184,6 +387,63 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
 
   // Update form state initialization
   const [formValues, setFormValues] = useState<FormValues>(initialFormState);
+
+  // Near the top of the component, after initialFormState
+  const [isLoadingLocation, setIsLoadingLocation] = useState(true);
+
+  useEffect(() => {
+    // Get current location when component mounts
+    if (navigator.geolocation) {
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          handleInputChange('coordinates', {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+          setIsLoadingLocation(false);
+        },
+        (error) => {
+          console.warn('Location error:', error.message);
+          // More user-friendly error handling
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              alert('Please enable location access to use current location.');
+              break;
+            case error.POSITION_UNAVAILABLE:
+              alert('Location information is unavailable. Using default location.');
+              break;
+            case error.TIMEOUT:
+              alert('Location request timed out. Using default location.');
+              break;
+            default:
+              alert('An error occurred getting location. Using default location.');
+          }
+          // Fall back to default coordinates (Wellington)
+          handleInputChange('coordinates', { 
+            lat: -41.2865, 
+            lng: 174.7762 
+          });
+          setIsLoadingLocation(false);
+        },
+        {
+          enableHighAccuracy: false, // Set to false for faster response
+          timeout: 10000,           // Reduce timeout to 10 seconds
+          maximumAge: 300000        // Allow cached positions up to 5 minutes old
+        }
+      );
+
+      // Cleanup function to stop watching location
+      return () => navigator.geolocation.clearWatch(watchId);
+    } else {
+      // Geolocation not supported
+      alert('Geolocation is not supported by your browser. Using default location.');
+      handleInputChange('coordinates', { 
+        lat: -41.2865, 
+        lng: 174.7762 
+      });
+      setIsLoadingLocation(false);
+    }
+  }, []); // Empty dependency array means this runs once on mount
 
   // Toggle section visibility
   const toggleSection = (section: SectionName) => {
@@ -202,20 +462,37 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
     }));
   };
 
-  // Handle status changes for inspection items
-  const handleStatusChange = (field: FormField, value: string) => {
-    setFormValues(prev => ({
-      ...prev,
-      [field]: { ...(prev[field] as { status: string; notes: string }), status: value }
-    }));
+  // Update the type and functions
+  type FormPath = string;
+
+  const handleStatusChange = (path: FormPath, value: string[]) => {
+    setFormValues(prev => {
+      const newValues = { ...prev };
+      const parts = path.split('.');
+      let current: any = newValues;
+      
+      for (let i = 0; i < parts.length - 1; i++) {
+        current = current[parts[i]];
+      }
+      current[parts[parts.length - 1]] = value;
+      
+      return newValues;
+    });
   };
 
-  // Handle notes changes for inspection items
-  const handleNotesChange = (field: FormField, value: string) => {
-    setFormValues(prev => ({
-      ...prev,
-      [field]: { ...(prev[field] as { status: string; notes: string }), notes: value }
-    }));
+  const handleNotesChange = (path: FormPath, value: string) => {
+    setFormValues(prev => {
+      const newValues = { ...prev };
+      const parts = path.split('.');
+      let current: any = newValues;
+      
+      for (let i = 0; i < parts.length - 1; i++) {
+        current = current[parts[i]];
+      }
+      current[parts[parts.length - 1]] = value;
+      
+      return newValues;
+    });
   };
 
   // Handle photo upload
@@ -276,42 +553,57 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
     }
   };
 
+  // Update the photo deletion handler
+  const handlePhotoDelete = async (index: number) => {
+    try {
+      const photo = formValues.photos[index];
+      const fileName = photo.file_path.split('/').pop();
+      
+      if (fileName) {
+        await supabase.storage
+          .from('fire-door-photos')
+          .remove([fileName]);
+      }
+      
+      const newPhotos = [...formValues.photos];
+      newPhotos.splice(index, 1);
+      setFormValues(prev => ({
+        ...prev,
+        photos: newPhotos
+      }));
+    } catch (error) {
+      console.error('Error deleting photo:', error);
+      alert('Error deleting photo');
+    }
+  };
+
   // Update handleSubmit
   const handleSubmit = async () => {
     try {
       const submissionData = {
         location_name: formValues.locationName,
-        location_id: formValues.locationId,
+        coordinates: formValues.coordinates,
         door_type: formValues.doorType,
         installation_type: formValues.installationType,
         manufacturer: formValues.manufacturer,
         doorset_number: formValues.doorsetNumber,
-        date_installed: formValues.dateInstalled || null, // Allow null if empty
-        fire_rating: formValues.fireRating,
+        date_installed: formValues.dateInstalled.day && formValues.dateInstalled.month && formValues.dateInstalled.year ? `${formValues.dateInstalled.year}-${formValues.dateInstalled.month}-${formValues.dateInstalled.day}` : null,
+        fire_rating: formValues.fireRating.integrity && formValues.fireRating.insulation ? `${formValues.fireRating.integrity}/${formValues.fireRating.insulation}` : null,
         door_closer_manufacturer: formValues.doorCloserManufacturer,
         num_hinges: formValues.numHinges,
         hardware_supplier: formValues.hardwareSupplier,
         has_standard_gaps: formValues.hasStandardGaps,
-        gaps_notes: formValues.gapsNotes,
-        leaf_dimensions: formValues.leafDimensions,
-        inspection_results: {
-          door_leaf: formValues.doorLeaf,
-          door_frame: formValues.doorFrame,
-          vision_panel: formValues.visionPanel,
-          intumescent_seal: formValues.intumescentSeal,
-          smoke_seal: formValues.smokeSeal,
-          hinges: formValues.hinges,
-          door_closer: formValues.doorCloser,
-          hardware: formValues.hardware,
-          door_tag: formValues.doorTag,
-          door_indicator: formValues.doorIndicator
-        },
-        photos: Array.isArray(formValues.photos) ? formValues.photos.map(p => ({
-          file_path: p.file_path,
-          description: p.description,
-          timestamp: p.timestamp
-        })) : [],
-        additional_notes: formValues.additionalNotes
+        has_standard_bottom_gap: formValues.hasStandardBottomGap,
+        gaps_notes: JSON.stringify(formValues.gapsNotes),
+        leaf_dimensions: JSON.stringify(formValues.leafDimensions),
+        second_leaf_dimensions: formValues.secondLeafDimensions ? JSON.stringify(formValues.secondLeafDimensions) : null,
+        inspection_results: JSON.stringify(formValues.inspection),
+        photos: JSON.stringify(formValues.photos),
+        additional_notes: formValues.additionalNotes,
+        site_conditions: JSON.stringify(formValues.siteConditions),
+        door_architrave: formValues.doorArchitrave,
+        door_material: JSON.stringify(formValues.doorMaterial),
+        building_features: JSON.stringify(formValues.buildingFeatures)
       };
 
       console.log('Submitting data:', submissionData);
@@ -359,6 +651,128 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
     testConnection();
   }, []);
 
+  // Add new options objects
+  const siteOptions = {
+    securityFeatures: [
+      'Ordinary Lockset',
+      'Electromagnetic Door Closer',
+      'Door Access',
+      'Motion Sensors',
+      'Others'
+    ],
+    wallSubstrate: ['Masonry', 'Plasterboard', 'Others'],
+    wallFinish: ['Painted', 'Others'],
+    floorSurface: ['Leveled', 'Sloping inward/outward'],
+    floorFinish: ['Concrete', 'Carpet', 'Vinyl', 'Wood', 'With Threshold'],
+    doorArchitrave: ['With', 'Without'],
+    doorMaterial: [
+      'Timber Leaf and Timber Frame',
+      'Timber Leaf and Steel Frame',
+      'Steel Leaf and Steel Frame',
+      'Others'
+    ]
+  };
+
+  // Add new component for "Other Specify" fields
+  const DropdownWithOther = ({ 
+    label, 
+    options, 
+    value, 
+    otherValue, 
+    onChange 
+  }: { 
+    label: string;
+    options: string[];
+    value: string;
+    otherValue?: string;
+    onChange: (value: string, otherValue?: string) => void;
+  }) => (
+    <div className="space-y-2">
+      <label className="block text-sm font-medium">{label}</label>
+      <select
+        className="w-full p-2 border rounded"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        {options.map(option => (
+          <option key={option} value={option}>{option}</option>
+        ))}
+      </select>
+      {value === 'Others' && (
+        <input
+          type="text"
+          className="w-full p-2 border rounded mt-2"
+          placeholder="Please specify..."
+          value={otherValue || ''}
+          onChange={(e) => onChange(value, e.target.value)}
+        />
+      )}
+    </div>
+  );
+
+  // Add validation function
+  const validateGaps = (gaps: FormValues['gaps']): boolean => {
+    if (gaps.top !== null && gaps.top > 3) return false;
+    if (gaps.leftSide !== null && gaps.leftSide > 3) return false;
+    if (gaps.rightSide !== null && gaps.rightSide > 3) return false;
+    if (gaps.bottom !== null && (gaps.bottom < 3 || gaps.bottom > 10)) return false;
+    if (gaps.inBetween !== null && (gaps.inBetween < 3 || gaps.inBetween > 4)) return false;
+    if (gaps.protrusion !== null && gaps.protrusion > 1) return false;
+    return true;
+  };
+
+  // Update the options object
+  const buildingOptions = {
+    security: [
+      'Ordinary Lockset',
+      'Electromagnetic Door Closer',
+      'Door Access',
+      'Motion Sensors',
+      'More'
+    ],
+    wallSubstrate: [
+      'Masonry',
+      'Plasterboard',
+      'Other'
+    ],
+    wallFinish: [
+      'Painted',
+      'Other'
+    ],
+    doorArchitrave: [
+      'With',
+      'Without'
+    ],
+    floorSurface: [
+      'Leveled',
+      'Sloping inward/outward'
+    ],
+    floorFinish: [
+      'Concrete',
+      'Carpet',
+      'Vinyl',
+      'Wood',
+      'With Threshold',
+      'Other'
+    ]
+  };
+
+  // Update the inspection options
+  const inspectionOptions = {
+    doorLeaf: ['Chipped', 'Cracked', 'With Voids', 'Altered', 'Binding'],
+    doorLeafMaterial: ['Damaged', 'Incorrect Type', 'Poor Condition'],
+    doorFrame: ['Chipped', 'Cracked', 'With Voids', 'Altered'],
+    doorFrameMaterial: ['Damaged', 'Incorrect Type', 'Poor Condition'],
+    visionPanel: ['Cracked', 'Scratched', 'Incorrect Type', 'Not Secure'],
+    intumescentSeal: ['Missing', 'Damaged', 'Incomplete', 'Wrong Type'],
+    smokeSeal: ['Missing', 'Damaged', 'Incomplete', 'Wrong Type'],
+    hinges: ['Loose', 'Missing Screws', 'Damaged', 'Wrong Type'],
+    doorCloser: ['Not Closing Properly', 'Damaged', 'Wrong Type'],
+    hardware: ['Loose', 'Damaged', 'Wrong Type', 'Not Functioning'],
+    fireTag: ['Missing', 'Damaged', 'Incorrect', 'Not Visible'],
+    doorSignage: ['Missing', 'Damaged', 'Incorrect', 'Not Visible']
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       <h1 className="text-3xl font-bold mb-8">Fire Door Survey</h1>
@@ -372,8 +786,8 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
           onToggle={() => toggleSection('location')}
         />
         {expandedSections.location && (
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+          <div className="p-6">
+            <div className="mb-4">
               <label className="block text-sm font-medium mb-1">Location Name</label>
               <input 
                 type="text"
@@ -382,14 +796,23 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                 onChange={(e) => handleInputChange('locationName', e.target.value)}
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Location ID</label>
-              <input 
-                type="text"
-                className="w-full p-2 border rounded"
-                value={formValues.locationId}
-                onChange={(e) => handleInputChange('locationId', e.target.value)}
-              />
+
+            <div className="h-[400px] relative">
+              {isLoadingLocation ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                  <p>Getting location...</p>
+                </div>
+              ) : (
+                <DynamicMap 
+                  center={[formValues.coordinates.lat || -41.2865, formValues.coordinates.lng || 174.7762]}
+                  onLocationSelect={(pos) => handleInputChange('coordinates', { lat: pos.lat, lng: pos.lng })}
+                >
+                  <LocationMarker
+                    position={[formValues.coordinates.lat || -41.2865, formValues.coordinates.lng || 174.7762]}
+                    onPositionChange={(pos) => handleInputChange('coordinates', { lat: pos.lat, lng: pos.lng })}
+                  />
+                </DynamicMap>
+              )}
             </div>
           </div>
         )}
@@ -433,7 +856,7 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
               </div>
             </div>
 
-            <h3 className="font-semibold mb-4">Fire Rating & Manufacturer</h3>
+            <h3 className="font-semibold mb-4">Fire Door Tagging</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Manufacturer</label>
@@ -455,22 +878,69 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Date Installed</label>
-                <input 
-                  type="date"
-                  className="w-full p-2 border rounded"
-                  value={formValues.dateInstalled}
-                  onChange={(e) => handleInputChange('dateInstalled', e.target.value)}
-                />
+                <div className="grid grid-cols-3 gap-2">
+                  <input
+                    type="number"
+                    placeholder="DD"
+                    className="w-full p-2 border rounded"
+                    min="1"
+                    max="31"
+                    value={formValues.dateInstalled.day}
+                    onChange={(e) => handleInputChange('dateInstalled', {
+                      ...formValues.dateInstalled,
+                      day: e.target.value
+                    })}
+                  />
+                  <input
+                    type="number"
+                    placeholder="MM"
+                    className="w-full p-2 border rounded"
+                    min="1"
+                    max="12"
+                    value={formValues.dateInstalled.month}
+                    onChange={(e) => handleInputChange('dateInstalled', {
+                      ...formValues.dateInstalled,
+                      month: e.target.value
+                    })}
+                  />
+                  <input
+                    type="number"
+                    placeholder="YYYY"
+                    className="w-full p-2 border rounded"
+                    min="1900"
+                    max={new Date().getFullYear()}
+                    value={formValues.dateInstalled.year}
+                    onChange={(e) => handleInputChange('dateInstalled', {
+                      ...formValues.dateInstalled,
+                      year: e.target.value
+                    })}
+                  />
+                </div>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Fire Resistance Rating</label>
-                <input 
-                  type="text"
-                  className="w-full p-2 border rounded"
-                  placeholder="e.g., -/60/30"
-                  value={formValues.fireRating}
-                  onChange={(e) => handleInputChange('fireRating', e.target.value)}
-                />
+                <label className="block text-sm font-medium mb-1">Fire Resistance Rating (-/XX/XX)</label>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">-/</span>
+                  <input
+                    type="number"
+                    className="w-20 p-2 border rounded"
+                    value={formValues.fireRating.integrity}
+                    onChange={(e) => handleInputChange('fireRating', {
+                      ...formValues.fireRating,
+                      integrity: e.target.value
+                    })}
+                  />
+                  <span className="text-lg">/</span>
+                  <input
+                    type="number"
+                    className="w-20 p-2 border rounded"
+                    value={formValues.fireRating.insulation}
+                    onChange={(e) => handleInputChange('fireRating', {
+                      ...formValues.fireRating,
+                      insulation: e.target.value
+                    })}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -486,33 +956,110 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
           onToggle={() => toggleSection('components')}
         />
         {expandedSections.components && (
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Door Closer Manufacturer</label>
-              <input 
-                type="text"
-                className="w-full p-2 border rounded"
-                value={formValues.doorCloserManufacturer}
-                onChange={(e) => handleInputChange('doorCloserManufacturer', e.target.value)}
-              />
+          <div className="p-6 space-y-6">
+            {/* Door Closer Sub-section */}
+            <div className="border rounded-lg p-4">
+              <h3 className="font-semibold mb-4">Door Closer</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Brand</label>
+                  <input 
+                    type="text"
+                    className="w-full p-2 border rounded"
+                    value={formValues.doorCloser.brand}
+                    onChange={(e) => handleInputChange('doorCloser', {
+                      ...formValues.doorCloser,
+                      brand: e.target.value
+                    })}
+                  />
+                </div>
+                <div className="flex items-center">
+                  <input 
+                    type="checkbox"
+                    className="mr-2"
+                    checked={formValues.doorCloser.ceMarking}
+                    onChange={(e) => handleInputChange('doorCloser', {
+                      ...formValues.doorCloser,
+                      ceMarking: e.target.checked
+                    })}
+                  />
+                  <label>CE Marking</label>
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Number of Hinges</label>
-              <input 
-                type="number"
-                className="w-full p-2 border rounded"
-                value={formValues.numHinges}
-                onChange={(e) => handleInputChange('numHinges', parseInt(e.target.value))}
-              />
+
+            {/* Hinges Sub-section */}
+            <div className="border rounded-lg p-4">
+              <h3 className="font-semibold mb-4">Hinges</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Number of Sets</label>
+                  <input 
+                    type="number"
+                    className="w-full p-2 border rounded"
+                    value={formValues.hinges.numSets}
+                    onChange={(e) => handleInputChange('hinges', {
+                      ...formValues.hinges,
+                      numSets: parseInt(e.target.value)
+                    })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Brand</label>
+                  <input 
+                    type="text"
+                    className="w-full p-2 border rounded"
+                    value={formValues.hinges.brand}
+                    onChange={(e) => handleInputChange('hinges', {
+                      ...formValues.hinges,
+                      brand: e.target.value
+                    })}
+                  />
+                </div>
+                <div className="flex items-center">
+                  <input 
+                    type="checkbox"
+                    className="mr-2"
+                    checked={formValues.hinges.ceMarking}
+                    onChange={(e) => handleInputChange('hinges', {
+                      ...formValues.hinges,
+                      ceMarking: e.target.checked
+                    })}
+                  />
+                  <label>CE Marking</label>
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Hardware Supplier</label>
-              <input 
-                type="text"
-                className="w-full p-2 border rounded"
-                value={formValues.hardwareSupplier}
-                onChange={(e) => handleInputChange('hardwareSupplier', e.target.value)}
-              />
+
+            {/* Door Handle, Locks, and Latches Sub-section */}
+            <div className="border rounded-lg p-4">
+              <h3 className="font-semibold mb-4">Door Handle, Locks, and Latches</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Brand</label>
+                  <input 
+                    type="text"
+                    className="w-full p-2 border rounded"
+                    value={formValues.hardware.brand}
+                    onChange={(e) => handleInputChange('hardware', {
+                      ...formValues.hardware,
+                      brand: e.target.value
+                    })}
+                  />
+                </div>
+                <div className="flex items-center">
+                  <input 
+                    type="checkbox"
+                    className="mr-2"
+                    checked={formValues.hardware.ceMarking}
+                    onChange={(e) => handleInputChange('hardware', {
+                      ...formValues.hardware,
+                      ceMarking: e.target.checked
+                    })}
+                  />
+                  <label>CE Marking</label>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -528,25 +1075,123 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
         />
         {expandedSections.dimensions && (
           <div className="p-6">
-            <div className="mb-4">
-              <div className="flex items-center space-x-2 mb-2">
+            <h3 className="font-semibold mb-4">Gap Measurements (mm)</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium mb-1">Top Gap</label>
                 <input 
-                  type="checkbox"
-                  className="rounded"
-                  checked={formValues.hasStandardGaps}
-                  onChange={(e) => handleInputChange('hasStandardGaps', e.target.checked)}
+                  type="number"
+                  step="0.1"
+                  className={`w-full p-2 border rounded ${
+                    formValues.gaps.top !== null && formValues.gaps.top > 3 ? 'border-red-500' : ''
+                  }`}
+                  value={formValues.gaps.top ?? ''}
+                  onChange={(e) => handleInputChange('gaps', {
+                    ...formValues.gaps,
+                    top: e.target.value ? parseFloat(e.target.value) : null
+                  })}
                 />
-                <label>3mm standard gaps throughout (+/- 1mm)</label>
+                {formValues.gaps.top !== null && formValues.gaps.top > 3 && (
+                  <p className="text-red-500 text-sm mt-1">Must not exceed 3mm</p>
+                )}
               </div>
-              {!formValues.hasStandardGaps && (
-                <textarea
-                  className="w-full p-2 border rounded"
-                  placeholder="Notes about non-standard gaps..."
-                  value={formValues.gapsNotes}
-                  onChange={(e) => handleInputChange('gapsNotes', e.target.value)}
-                  rows={2}
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Bottom Gap</label>
+                <input 
+                  type="number"
+                  step="0.1"
+                  className={`w-full p-2 border rounded ${
+                    formValues.gaps.bottom !== null && (formValues.gaps.bottom < 3 || formValues.gaps.bottom > 10) ? 'border-red-500' : ''
+                  }`}
+                  value={formValues.gaps.bottom ?? ''}
+                  onChange={(e) => handleInputChange('gaps', {
+                    ...formValues.gaps,
+                    bottom: e.target.value ? parseFloat(e.target.value) : null
+                  })}
                 />
+                {formValues.gaps.bottom !== null && (formValues.gaps.bottom < 3 || formValues.gaps.bottom > 10) && (
+                  <p className="text-red-500 text-sm mt-1">Must be between 3mm and 10mm</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Left Side Gap</label>
+                <input 
+                  type="number"
+                  step="0.1"
+                  className={`w-full p-2 border rounded ${
+                    formValues.gaps.leftSide !== null && formValues.gaps.leftSide > 3 ? 'border-red-500' : ''
+                  }`}
+                  value={formValues.gaps.leftSide ?? ''}
+                  onChange={(e) => handleInputChange('gaps', {
+                    ...formValues.gaps,
+                    leftSide: e.target.value ? parseFloat(e.target.value) : null
+                  })}
+                />
+                {formValues.gaps.leftSide !== null && formValues.gaps.leftSide > 3 && (
+                  <p className="text-red-500 text-sm mt-1">Must not exceed 3mm</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Right Side Gap</label>
+                <input 
+                  type="number"
+                  step="0.1"
+                  className={`w-full p-2 border rounded ${
+                    formValues.gaps.rightSide !== null && formValues.gaps.rightSide > 3 ? 'border-red-500' : ''
+                  }`}
+                  value={formValues.gaps.rightSide ?? ''}
+                  onChange={(e) => handleInputChange('gaps', {
+                    ...formValues.gaps,
+                    rightSide: e.target.value ? parseFloat(e.target.value) : null
+                  })}
+                />
+                {formValues.gaps.rightSide !== null && formValues.gaps.rightSide > 3 && (
+                  <p className="text-red-500 text-sm mt-1">Must not exceed 3mm</p>
+                )}
+              </div>
+
+              {formValues.doorType === 'double' && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">In-Between Gap</label>
+                  <input 
+                    type="number"
+                    step="0.1"
+                    className={`w-full p-2 border rounded ${
+                      formValues.gaps.inBetween !== null && (formValues.gaps.inBetween < 3 || formValues.gaps.inBetween > 4) ? 'border-red-500' : ''
+                    }`}
+                    value={formValues.gaps.inBetween ?? ''}
+                    onChange={(e) => handleInputChange('gaps', {
+                      ...formValues.gaps,
+                      inBetween: e.target.value ? parseFloat(e.target.value) : null
+                    })}
+                  />
+                  {formValues.gaps.inBetween !== null && (formValues.gaps.inBetween < 3 || formValues.gaps.inBetween > 4) && (
+                    <p className="text-red-500 text-sm mt-1">Must be between 3mm and 4mm</p>
+                  )}
+                </div>
               )}
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Protrusion from Frame</label>
+                <input 
+                  type="number"
+                  step="0.1"
+                  className={`w-full p-2 border rounded ${
+                    formValues.gaps.protrusion !== null && formValues.gaps.protrusion > 1 ? 'border-red-500' : ''
+                  }`}
+                  value={formValues.gaps.protrusion ?? ''}
+                  onChange={(e) => handleInputChange('gaps', {
+                    ...formValues.gaps,
+                    protrusion: e.target.value ? parseFloat(e.target.value) : null
+                  })}
+                />
+                {formValues.gaps.protrusion !== null && formValues.gaps.protrusion > 1 && (
+                  <p className="text-red-500 text-sm mt-1">Must not exceed 1mm</p>
+                )}
+              </div>
             </div>
 
             <h3 className="font-semibold mb-4">Leaf Dimensions</h3>
@@ -656,6 +1301,50 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                 </div>
               </div>
             )}
+
+            {formValues.doorType === 'double' && (
+              <div className="mt-6">
+                <h4 className="font-medium mb-2">Second Leaf Dimensions (R)</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Width (mm)</label>
+                    <input 
+                      type="number"
+                      className="w-full p-2 border rounded"
+                      value={formValues.secondLeafDimensions?.width}
+                      onChange={(e) => handleInputChange('secondLeafDimensions', {
+                        ...formValues.secondLeafDimensions,
+                        width: e.target.value
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Height (mm)</label>
+                    <input 
+                      type="number"
+                      className="w-full p-2 border rounded"
+                      value={formValues.secondLeafDimensions?.height}
+                      onChange={(e) => handleInputChange('secondLeafDimensions', {
+                        ...formValues.secondLeafDimensions,
+                        height: e.target.value
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Thickness (mm)</label>
+                    <input 
+                      type="number"
+                      className="w-full p-2 border rounded"
+                      value={formValues.secondLeafDimensions?.thickness}
+                      onChange={(e) => handleInputChange('secondLeafDimensions', {
+                        ...formValues.secondLeafDimensions,
+                        thickness: e.target.value
+                      })}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -673,91 +1362,91 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
             <DropdownWithNotes 
               label="Door Leaf Status" 
               options={statusOptions.doorLeaf}
-              value={formValues.doorLeaf.status}
-              onChange={(value) => handleStatusChange('doorLeaf', value)}
-              notes={formValues.doorLeaf.notes}
-              onNotesChange={(value) => handleNotesChange('doorLeaf', value)}
+              value={formValues.inspection.doorLeaf.status}
+              onChange={(value) => handleStatusChange('inspection.doorLeaf.status', value)}
+              notes={formValues.inspection.doorLeaf.notes}
+              onNotesChange={(value) => handleNotesChange('inspection.doorLeaf.notes', value)}
             />
 
             <DropdownWithNotes 
               label="Door Frame Status" 
               options={statusOptions.doorFrame}
-              value={formValues.doorFrame.status}
-              onChange={(value) => handleStatusChange('doorFrame', value)}
-              notes={formValues.doorFrame.notes}
-              onNotesChange={(value) => handleNotesChange('doorFrame', value)}
+              value={formValues.inspection.doorFrame.status}
+              onChange={(value) => handleStatusChange('inspection.doorFrame.status', value)}
+              notes={formValues.inspection.doorFrame.notes}
+              onNotesChange={(value) => handleNotesChange('inspection.doorFrame.notes', value)}
             />
 
             <DropdownWithNotes 
               label="Vision Panel Status" 
               options={statusOptions.visionPanel}
-              value={formValues.visionPanel.status}
-              onChange={(value) => handleStatusChange('visionPanel', value)}
-              notes={formValues.visionPanel.notes}
-              onNotesChange={(value) => handleNotesChange('visionPanel', value)}
+              value={formValues.inspection.visionPanel.status}
+              onChange={(value) => handleStatusChange('inspection.visionPanel.status', value)}
+              notes={formValues.inspection.visionPanel.notes}
+              onNotesChange={(value) => handleNotesChange('inspection.visionPanel.notes', value)}
             />
 
             <DropdownWithNotes 
               label="Intumescent Seal" 
               options={statusOptions.seals}
-              value={formValues.intumescentSeal.status}
-              onChange={(value) => handleStatusChange('intumescentSeal', value)}
-              notes={formValues.intumescentSeal.notes}
-              onNotesChange={(value) => handleNotesChange('intumescentSeal', value)}
+              value={formValues.inspection.intumescentSeal.status}
+              onChange={(value) => handleStatusChange('inspection.intumescentSeal.status', value)}
+              notes={formValues.inspection.intumescentSeal.notes}
+              onNotesChange={(value) => handleNotesChange('inspection.intumescentSeal.notes', value)}
             />
 
             <DropdownWithNotes 
               label="Smoke Seal" 
               options={statusOptions.seals}
-              value={formValues.smokeSeal.status}
-              onChange={(value) => handleStatusChange('smokeSeal', value)}
-              notes={formValues.smokeSeal.notes}
-              onNotesChange={(value) => handleNotesChange('smokeSeal', value)}
+              value={formValues.inspection.smokeSeal.status}
+              onChange={(value) => handleStatusChange('inspection.smokeSeal.status', value)}
+              notes={formValues.inspection.smokeSeal.notes}
+              onNotesChange={(value) => handleNotesChange('inspection.smokeSeal.notes', value)}
             />
 
             <DropdownWithNotes 
               label="Hinges Status" 
               options={statusOptions.hinges}
-              value={formValues.hinges.status}
-              onChange={(value) => handleStatusChange('hinges', value)}
-              notes={formValues.hinges.notes}
-              onNotesChange={(value) => handleNotesChange('hinges', value)}
+              value={formValues.inspection.hinges.status}
+              onChange={(value) => handleStatusChange('inspection.hinges.status', value)}
+              notes={formValues.inspection.hinges.notes}
+              onNotesChange={(value) => handleNotesChange('inspection.hinges.notes', value)}
             />
 
             <DropdownWithNotes 
               label="Door Closer Status" 
               options={statusOptions.doorCloser}
-              value={formValues.doorCloser.status}
-              onChange={(value) => handleStatusChange('doorCloser', value)}
-              notes={formValues.doorCloser.notes}
-              onNotesChange={(value) => handleNotesChange('doorCloser', value)}
+              value={formValues.inspection.doorCloser.status}
+              onChange={(value) => handleStatusChange('inspection.doorCloser.status', value)}
+              notes={formValues.inspection.doorCloser.notes}
+              onNotesChange={(value) => handleNotesChange('inspection.doorCloser.notes', value)}
             />
 
             <DropdownWithNotes 
               label="Hardware Status" 
               options={statusOptions.hardware}
-              value={formValues.hardware.status}
-              onChange={(value) => handleStatusChange('hardware', value)}
-              notes={formValues.hardware.notes}
-              onNotesChange={(value) => handleNotesChange('hardware', value)}
+              value={formValues.inspection.hardware.status}
+              onChange={(value) => handleStatusChange('inspection.hardware.status', value)}
+              notes={formValues.inspection.hardware.notes}
+              onNotesChange={(value) => handleNotesChange('inspection.hardware.notes', value)}
             />
 
             <DropdownWithNotes 
               label="Door Tag Status" 
               options={statusOptions.doorTag}
-              value={formValues.doorTag.status}
-              onChange={(value) => handleStatusChange('doorTag', value)}
-              notes={formValues.doorTag.notes}
-              onNotesChange={(value) => handleNotesChange('doorTag', value)}
+              value={formValues.inspection.fireTag.status}
+              onChange={(value) => handleStatusChange('inspection.fireTag.status', value)}
+              notes={formValues.inspection.fireTag.notes}
+              onNotesChange={(value) => handleNotesChange('inspection.fireTag.notes', value)}
             />
 
             <DropdownWithNotes 
               label="Door Indicator Status" 
               options={statusOptions.doorIndicator}
-              value={formValues.doorIndicator.status}
-              onChange={(value) => handleStatusChange('doorIndicator', value)}
-              notes={formValues.doorIndicator.notes}
-              onNotesChange={(value) => handleNotesChange('doorIndicator', value)}
+              value={formValues.inspection.doorSignage.status}
+              onChange={(value) => handleStatusChange('inspection.doorSignage.status', value)}
+              notes={formValues.inspection.doorSignage.notes}
+              onNotesChange={(value) => handleNotesChange('inspection.doorSignage.notes', value)}
             />
           </div>
         )}
@@ -803,23 +1492,7 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                       <span className="text-sm font-medium">Photo {index + 1}</span>
                       <button
                         className="text-red-600 hover:text-red-800"
-                        onClick={async () => {
-                          try {
-                            // Delete from storage
-                            const fileName = photo.file_path.split('/').pop();
-                            if (fileName) {
-                              await supabase.storage
-                                .from('fire-door-photos')
-                                .remove([fileName]);
-                            }
-                            // Remove from form state
-                            const newPhotos = formValues.photos.filter((_, i) => i !== index);
-                            handleInputChange('photos', newPhotos);
-                          } catch (error) {
-                            console.error('Error deleting photo:', error);
-                            alert('Error deleting photo');
-                          }
-                        }}
+                        onClick={() => handlePhotoDelete(index)}
                       >
                         Delete
                       </button>
@@ -855,6 +1528,306 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                 onChange={(e) => handleInputChange('additionalNotes', e.target.value)}
                 placeholder="Any additional notes about the photos or general observations..."
               />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Building Features Section */}
+      <div className="bg-white rounded-lg shadow">
+        <SectionHeader 
+          title="Building Features" 
+          section="buildingFeatures"
+          isExpanded={expandedSections.buildingFeatures}
+          onToggle={() => toggleSection('buildingFeatures')}
+        />
+        {expandedSections.buildingFeatures && (
+          <div className="p-6 space-y-6">
+            {/* Security Features */}
+            <div className="space-y-4">
+              <h3 className="font-semibold">Security Features</h3>
+              <div className="space-y-2">
+                {buildingOptions.security.map(feature => (
+                  <label key={feature} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={formValues.buildingFeatures.security.features.includes(feature)}
+                      onChange={(e) => {
+                        const newFeatures = e.target.checked
+                          ? [...formValues.buildingFeatures.security.features, feature]
+                          : formValues.buildingFeatures.security.features.filter(f => f !== feature);
+                        handleInputChange('buildingFeatures', {
+                          ...formValues.buildingFeatures,
+                          security: {
+                            ...formValues.buildingFeatures.security,
+                            features: newFeatures
+                          }
+                        });
+                      }}
+                    />
+                    {feature}
+                  </label>
+                ))}
+              </div>
+              {formValues.buildingFeatures.security.features.includes('More') && (
+                <input
+                  type="text"
+                  className="w-full p-2 border rounded"
+                  placeholder="Please specify additional security features..."
+                  value={formValues.buildingFeatures.security.moreDetails || ''}
+                  onChange={(e) => handleInputChange('buildingFeatures', {
+                    ...formValues.buildingFeatures,
+                    security: {
+                      ...formValues.buildingFeatures.security,
+                      moreDetails: e.target.value
+                    }
+                  })}
+                />
+              )}
+            </div>
+
+            {/* Wall */}
+            <div className="space-y-4">
+              <h3 className="font-semibold">Wall</h3>
+              <div>
+                <label className="block text-sm font-medium mb-1">Substrate</label>
+                <select
+                  className="w-full p-2 border rounded mb-2"
+                  value={formValues.buildingFeatures.wall.substrate}
+                  onChange={(e) => handleInputChange('buildingFeatures', {
+                    ...formValues.buildingFeatures,
+                    wall: {
+                      ...formValues.buildingFeatures.wall,
+                      substrate: e.target.value
+                    }
+                  })}
+                >
+                  {buildingOptions.wallSubstrate.map(option => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+                {formValues.buildingFeatures.wall.substrate === 'Other' && (
+                  <input
+                    type="text"
+                    className="w-full p-2 border rounded"
+                    placeholder="Please specify substrate..."
+                    value={formValues.buildingFeatures.wall.substrateOther || ''}
+                    onChange={(e) => handleInputChange('buildingFeatures', {
+                      ...formValues.buildingFeatures,
+                      wall: {
+                        ...formValues.buildingFeatures.wall,
+                        substrateOther: e.target.value
+                      }
+                    })}
+                  />
+                )}
+              </div>
+
+              {/* Wall Finish */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Wall Finish</label>
+                <select
+                  className="w-full p-2 border rounded mb-2"
+                  value={formValues.buildingFeatures.wall.finish}
+                  onChange={(e) => handleInputChange('buildingFeatures', {
+                    ...formValues.buildingFeatures,
+                    wall: {
+                      ...formValues.buildingFeatures.wall,
+                      finish: e.target.value
+                    }
+                  })}
+                >
+                  {buildingOptions.wallFinish.map(option => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+                {formValues.buildingFeatures.wall.finish === 'Other' && (
+                  <input
+                    type="text"
+                    className="w-full p-2 border rounded"
+                    placeholder="Please specify wall finish..."
+                    value={formValues.buildingFeatures.wall.finishOther || ''}
+                    onChange={(e) => handleInputChange('buildingFeatures', {
+                      ...formValues.buildingFeatures,
+                      wall: {
+                        ...formValues.buildingFeatures.wall,
+                        finishOther: e.target.value
+                      }
+                    })}
+                  />
+                )}
+              </div>
+
+              {/* Door Architrave */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Door Architrave</label>
+                <select
+                  className="w-full p-2 border rounded"
+                  value={formValues.buildingFeatures.wall.architrave}
+                  onChange={(e) => handleInputChange('buildingFeatures', {
+                    ...formValues.buildingFeatures,
+                    wall: {
+                      ...formValues.buildingFeatures.wall,
+                      architrave: e.target.value
+                    }
+                  })}
+                >
+                  {buildingOptions.doorArchitrave.map(option => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Floor */}
+            <div className="space-y-4">
+              <h3 className="font-semibold">Floor</h3>
+              <div>
+                <label className="block text-sm font-medium mb-1">Floor Surface</label>
+                <select
+                  className="w-full p-2 border rounded"
+                  value={formValues.buildingFeatures.floor.surface}
+                  onChange={(e) => handleInputChange('buildingFeatures', {
+                    ...formValues.buildingFeatures,
+                    floor: {
+                      ...formValues.buildingFeatures.floor,
+                      surface: e.target.value
+                    }
+                  })}
+                >
+                  {buildingOptions.floorSurface.map(option => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Floor Finish</label>
+                <div className="space-y-2">
+                  {buildingOptions.floorFinish.map(finish => (
+                    <label key={finish} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={formValues.buildingFeatures.floor.finish.includes(finish)}
+                        onChange={(e) => {
+                          const newFinishes = e.target.checked
+                            ? [...formValues.buildingFeatures.floor.finish, finish]
+                            : formValues.buildingFeatures.floor.finish.filter(f => f !== finish);
+                          handleInputChange('buildingFeatures', {
+                            ...formValues.buildingFeatures,
+                            floor: {
+                              ...formValues.buildingFeatures.floor,
+                              finish: newFinishes
+                            }
+                          });
+                        }}
+                      />
+                      {finish}
+                    </label>
+                  ))}
+                </div>
+                {formValues.buildingFeatures.floor.finish.includes('Other') && (
+                  <input
+                    type="text"
+                    className="w-full p-2 border rounded mt-2"
+                    placeholder="Please specify floor finish..."
+                    value={formValues.buildingFeatures.floor.finishOther || ''}
+                    onChange={(e) => handleInputChange('buildingFeatures', {
+                      ...formValues.buildingFeatures,
+                      floor: {
+                        ...formValues.buildingFeatures.floor,
+                        finishOther: e.target.value
+                      }
+                    })}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Additional Notes */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Additional Notes</label>
+              <textarea
+                className="w-full p-2 border rounded"
+                rows={3}
+                value={formValues.buildingFeatures.notes}
+                onChange={(e) => handleInputChange('buildingFeatures', {
+                  ...formValues.buildingFeatures,
+                  notes: e.target.value
+                })}
+                placeholder="Any additional notes about building features..."
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Door Architrave Section */}
+      <div className="bg-white rounded-lg shadow">
+        <SectionHeader 
+          title="Door Architrave" 
+          section="doorArchitrave"
+          isExpanded={expandedSections.doorArchitrave}
+          onToggle={() => toggleSection('doorArchitrave')}
+        />
+        {expandedSections.doorArchitrave && (
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Door Architrave</label>
+                <select
+                  className="w-full p-2 border rounded"
+                  value={formValues.doorArchitrave}
+                  onChange={(e) => handleInputChange('doorArchitrave', e.target.value)}
+                >
+                  {siteOptions.doorArchitrave.map(option => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Door Material Section */}
+      <div className="bg-white rounded-lg shadow">
+        <SectionHeader 
+          title="Door Material" 
+          section="doorMaterial"
+          isExpanded={expandedSections.doorMaterial}
+          onToggle={() => toggleSection('doorMaterial')}
+        />
+        {expandedSections.doorMaterial && (
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Door Material</label>
+                <select
+                  className="w-full p-2 border rounded"
+                  value={formValues.doorMaterial.type}
+                  onChange={(e) => handleInputChange('doorMaterial', {
+                    ...formValues.doorMaterial,
+                    type: e.target.value
+                  })}
+                >
+                  {siteOptions.doorMaterial.map(option => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Other Specify</label>
+                <input
+                  type="text"
+                  className="w-full p-2 border rounded"
+                  value={formValues.doorMaterial.otherSpecify}
+                  onChange={(e) => handleInputChange('doorMaterial', {
+                    ...formValues.doorMaterial,
+                    otherSpecify: e.target.value
+                  })}
+                />
+              </div>
             </div>
           </div>
         )}

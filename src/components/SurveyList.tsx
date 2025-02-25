@@ -8,7 +8,6 @@ interface Survey {
   id: string
   created_at: string
   location_name: string
-  location_id: string
   door_type: string
   installation_type: string
   fire_rating: string
@@ -29,7 +28,7 @@ export const SurveyList: React.FC<SurveyListProps> = ({ refreshTrigger }) => {
       try {
         const { data, error } = await supabase
           .from('fire_door_surveys')
-          .select('id, created_at, location_name, location_id, door_type, installation_type, fire_rating')
+          .select('id, created_at, location_name, door_type, installation_type, fire_rating')
           .order('created_at', { ascending: false })
 
         if (error) throw error
@@ -72,7 +71,6 @@ export const SurveyList: React.FC<SurveyListProps> = ({ refreshTrigger }) => {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Door Type</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Installation</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fire Rating</th>
@@ -91,9 +89,6 @@ export const SurveyList: React.FC<SurveyListProps> = ({ refreshTrigger }) => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                   {survey.location_name}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {survey.location_id}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {survey.door_type}

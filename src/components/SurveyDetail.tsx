@@ -2,6 +2,18 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import dynamic from 'next/dynamic'
+
+// Dynamic imports for Leaflet components
+const DynamicMap = dynamic(
+  () => import('@/components/Map').then(mod => mod.DynamicMap),
+  { ssr: false }
+)
+
+const LeafletMarker = dynamic(
+  () => import('react-leaflet').then(mod => mod.Marker),
+  { ssr: false }
+)
 
 interface SurveyDetailProps {
   surveyId: string;
@@ -50,9 +62,15 @@ export const SurveyDetail: React.FC<SurveyDetailProps> = ({ surveyId, onClose })
           {/* Location Details */}
           <section className="border-b pb-4">
             <h3 className="text-lg font-semibold mb-2">Location Details</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
               <p><span className="font-medium">Name:</span> {survey.location_name || '-'}</p>
-              <p><span className="font-medium">ID:</span> {survey.location_id || '-'}</p>
+              <div className="h-[300px]">
+                <DynamicMap 
+                  center={[survey.coordinates?.lat || -41.2865, survey.coordinates?.lng || 174.7762]}
+                >
+                  <LeafletMarker position={[survey.coordinates?.lat || -41.2865, survey.coordinates?.lng || 174.7762]} />
+                </DynamicMap>
+              </div>
             </div>
           </section>
 
