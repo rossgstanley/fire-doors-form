@@ -151,8 +151,8 @@ export const SurveyDetail: React.FC<SurveyDetailProps> = ({ surveyId, onClose })
               </p>
               <p><span className="font-medium">Manufacturer:</span> {survey.manufacturer}</p>
               <p><span className="font-medium">Doorset Number:</span> {survey.doorset_number}</p>
-              <p><span className="font-medium">Date Installed:</span> {survey.date_installed}</p>
-              <p><span className="font-medium">Fire Rating:</span> {survey.fire_rating}</p>
+              <p><span className="font-medium">Date Manufactured:</span> {survey.date_manufactured}</p>
+              <p><span className="font-medium">Fire Rating:</span> {survey.fire_rating ? `-/${survey.fire_rating}` : ''}</p>
             </div>
           </section>
 
@@ -206,12 +206,18 @@ export const SurveyDetail: React.FC<SurveyDetailProps> = ({ surveyId, onClose })
               <div>
                 <h4 className="font-medium">Gap Measurements</h4>
                 <div className="grid grid-cols-3 gap-4 ml-4">
-                  <p>Top: {formatValue(survey.gaps?.top, ' mm')}</p>
-                  <p>Bottom: {formatValue(survey.gaps?.bottom, ' mm')}</p>
                   <p>Left Side: {formatValue(survey.gaps?.leftSide, ' mm')}</p>
                   <p>Right Side: {formatValue(survey.gaps?.rightSide, ' mm')}</p>
                   <p>In-Between: {formatValue(survey.gaps?.inBetween, ' mm')}</p>
                   <p>Protrusion: {formatValue(survey.gaps?.protrusion, ' mm')}</p>
+                  {survey.door_type === 'double' && (
+                    <>
+                      <p>Left Door Top: {formatValue(survey.gaps?.leftDoor?.top, ' mm')}</p>
+                      <p>Left Door Bottom: {formatValue(survey.gaps?.leftDoor?.bottom, ' mm')}</p>
+                      <p>Right Door Top: {formatValue(survey.gaps?.rightDoor?.top, ' mm')}</p>
+                      <p>Right Door Bottom: {formatValue(survey.gaps?.rightDoor?.bottom, ' mm')}</p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -225,7 +231,12 @@ export const SurveyDetail: React.FC<SurveyDetailProps> = ({ surveyId, onClose })
                 if (!value.status.length && !value.notes) return null;
                 return (
                   <div key={key} className="border-b last:border-0 py-2">
-                    <p className="font-medium">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
+                    <p className="font-medium">
+                      {key
+                        .split(/(?=[A-Z])/)
+                        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                        .join(' ')}
+                    </p>
                     {value.status.length > 0 && (
                       <p className="ml-4">Issues: {value.status.join(', ')}</p>
                     )}

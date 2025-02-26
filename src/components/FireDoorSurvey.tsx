@@ -1360,198 +1360,154 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
               </>
             )}
 
-            {/* Gap Measurements - moved to end */}
-            <h3 className="font-semibold mb-4 mt-6">Gap Measurements (mm)</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium mb-1">Left Side Gap</label>
-                <input 
-                  type="number"
-                  step="0.1"
-                  className="w-full p-2 border rounded"
-                  value={formValues.gaps.leftSide ?? ''}
-                  onWheel={preventScroll}
-                  onKeyDown={(e) => handleNumberInput(e)}
-                  onChange={(e) => handleInputChange('gaps', {
-                    ...formValues.gaps,
-                    leftSide: e.target.value ? parseFloat(e.target.value) : null
-                  })}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Right Side Gap</label>
-                <input 
-                  type="number"
-                  step="0.1"
-                  className="w-full p-2 border rounded"
-                  value={formValues.gaps.rightSide ?? ''}
-                  onWheel={preventScroll}
-                  onKeyDown={(e) => handleNumberInput(e)}
-                  onChange={(e) => handleInputChange('gaps', {
-                    ...formValues.gaps,
-                    rightSide: e.target.value ? parseFloat(e.target.value) : null
-                  })}
-                />
-              </div>
-
-              {formValues.doorType === 'double' && (
+            {/* Gap Measurements Sub-section */}
+            <div className="border rounded-lg p-4">
+              <h3 className="font-semibold mb-4">Gap Measurements</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">In-Between Gap</label>
-                  <input 
+                  <label className="block text-sm font-medium mb-1">Left Side Gap (mm)</label>
+                  <input
                     type="number"
-                    step="0.1"
                     className="w-full p-2 border rounded"
-                    value={formValues.gaps.inBetween ?? ''}
+                    value={formValues.gaps.leftSide || ''}
+                    min="0"
                     onWheel={preventScroll}
                     onKeyDown={(e) => handleNumberInput(e)}
                     onChange={(e) => handleInputChange('gaps', {
                       ...formValues.gaps,
-                      inBetween: e.target.value ? parseFloat(e.target.value) : null
+                      leftSide: e.target.value ? Number(e.target.value) : null
                     })}
                   />
                 </div>
-              )}
 
-              <div>
-                <label className="block text-sm font-medium mb-1">Protrusion from Frame</label>
-                <input 
-                  type="number"
-                  step="0.1"
-                  className="w-full p-2 border rounded"
-                  value={formValues.gaps.protrusion ?? ''}
-                  onWheel={preventScroll}
-                  onKeyDown={(e) => handleNumberInput(e, true, true)}
-                  onChange={(e) => handleInputChange('gaps', {
-                    ...formValues.gaps,
-                    protrusion: e.target.value ? parseFloat(e.target.value) : null
-                  })}
-                />
+                <div>
+                  <label className="block text-sm font-medium mb-1">Right Side Gap (mm)</label>
+                  <input
+                    type="number"
+                    className="w-full p-2 border rounded"
+                    value={formValues.gaps.rightSide || ''}
+                    min="0"
+                    onWheel={preventScroll}
+                    onKeyDown={(e) => handleNumberInput(e)}
+                    onChange={(e) => handleInputChange('gaps', {
+                      ...formValues.gaps,
+                      rightSide: e.target.value ? Number(e.target.value) : null
+                    })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">In-Between Gap (mm)</label>
+                  <input
+                    type="number"
+                    className="w-full p-2 border rounded"
+                    value={formValues.gaps.inBetween || ''}
+                    min="0"
+                    onWheel={preventScroll}
+                    onKeyDown={(e) => handleNumberInput(e)}
+                    onChange={(e) => handleInputChange('gaps', {
+                      ...formValues.gaps,
+                      inBetween: e.target.value ? Number(e.target.value) : null
+                    })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Protrusion from Frame (mm)</label>
+                  <input
+                    type="number"
+                    className="w-full p-2 border rounded"
+                    value={formValues.gaps.protrusion || ''}
+                    min="0"
+                    onWheel={preventScroll}
+                    onKeyDown={(e) => handleNumberInput(e)}
+                    onChange={(e) => handleInputChange('gaps', {
+                      ...formValues.gaps,
+                      protrusion: e.target.value ? Number(e.target.value) : null
+                    })}
+                  />
+                </div>
+
+                {formValues.doorType === 'double' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Left Door Top Gap (mm)</label>
+                      <input
+                        type="number"
+                        className="w-full p-2 border rounded"
+                        value={formValues.gaps.leftDoor?.top || ''}
+                        min="0"
+                        onWheel={preventScroll}
+                        onKeyDown={(e) => handleNumberInput(e)}
+                        onChange={(e) => handleInputChange('gaps', {
+                          ...formValues.gaps,
+                          leftDoor: {
+                            ...formValues.gaps.leftDoor,
+                            top: e.target.value ? Number(e.target.value) : null
+                          }
+                        })}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Left Door Bottom Gap (mm)</label>
+                      <input
+                        type="number"
+                        className="w-full p-2 border rounded"
+                        value={formValues.gaps.leftDoor?.bottom || ''}
+                        min="0"
+                        onWheel={preventScroll}
+                        onKeyDown={(e) => handleNumberInput(e)}
+                        onChange={(e) => handleInputChange('gaps', {
+                          ...formValues.gaps,
+                          leftDoor: {
+                            ...formValues.gaps.leftDoor,
+                            bottom: e.target.value ? Number(e.target.value) : null
+                          }
+                        })}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Right Door Top Gap (mm)</label>
+                      <input
+                        type="number"
+                        className="w-full p-2 border rounded"
+                        value={formValues.gaps.rightDoor?.top || ''}
+                        min="0"
+                        onWheel={preventScroll}
+                        onKeyDown={(e) => handleNumberInput(e)}
+                        onChange={(e) => handleInputChange('gaps', {
+                          ...formValues.gaps,
+                          rightDoor: {
+                            ...formValues.gaps.rightDoor,
+                            top: e.target.value ? Number(e.target.value) : null
+                          }
+                        })}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Right Door Bottom Gap (mm)</label>
+                      <input
+                        type="number"
+                        className="w-full p-2 border rounded"
+                        value={formValues.gaps.rightDoor?.bottom || ''}
+                        min="0"
+                        onWheel={preventScroll}
+                        onKeyDown={(e) => handleNumberInput(e)}
+                        onChange={(e) => handleInputChange('gaps', {
+                          ...formValues.gaps,
+                          rightDoor: {
+                            ...formValues.gaps.rightDoor,
+                            bottom: e.target.value ? Number(e.target.value) : null
+                          }
+                        })}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
-
-              {formValues.doorType === 'double' ? (
-                <>
-                  {/* Left Door */}
-                  <div className="col-span-2">
-                    <h4 className="font-medium mb-2">Left Door</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Top Gap</label>
-                        <input 
-                          type="number"
-                          step="0.1"
-                          className="w-full p-2 border rounded"
-                          value={formValues.gaps.leftDoor?.top ?? ''}
-                          onWheel={preventScroll}
-                          onKeyDown={(e) => handleNumberInput(e)}
-                          onChange={(e) => handleInputChange('gaps', {
-                            ...formValues.gaps,
-                            leftDoor: {
-                              ...formValues.gaps.leftDoor,
-                              top: e.target.value ? parseFloat(e.target.value) : null
-                            }
-                          })}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Bottom Gap</label>
-                        <input 
-                          type="number"
-                          step="0.1"
-                          className="w-full p-2 border rounded"
-                          value={formValues.gaps.leftDoor?.bottom ?? ''}
-                          onWheel={preventScroll}
-                          onKeyDown={(e) => handleNumberInput(e)}
-                          onChange={(e) => handleInputChange('gaps', {
-                            ...formValues.gaps,
-                            leftDoor: {
-                              ...formValues.gaps.leftDoor,
-                              bottom: e.target.value ? parseFloat(e.target.value) : null
-                            }
-                          })}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Right Door */}
-                  <div className="col-span-2">
-                    <h4 className="font-medium mb-2">Right Door</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Top Gap</label>
-                        <input 
-                          type="number"
-                          step="0.1"
-                          className="w-full p-2 border rounded"
-                          value={formValues.gaps.rightDoor?.top ?? ''}
-                          onWheel={preventScroll}
-                          onKeyDown={(e) => handleNumberInput(e)}
-                          onChange={(e) => handleInputChange('gaps', {
-                            ...formValues.gaps,
-                            rightDoor: {
-                              ...formValues.gaps.rightDoor,
-                              top: e.target.value ? parseFloat(e.target.value) : null
-                            }
-                          })}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Bottom Gap</label>
-                        <input 
-                          type="number"
-                          step="0.1"
-                          className="w-full p-2 border rounded"
-                          value={formValues.gaps.rightDoor?.bottom ?? ''}
-                          onWheel={preventScroll}
-                          onKeyDown={(e) => handleNumberInput(e)}
-                          onChange={(e) => handleInputChange('gaps', {
-                            ...formValues.gaps,
-                            rightDoor: {
-                              ...formValues.gaps.rightDoor,
-                              bottom: e.target.value ? parseFloat(e.target.value) : null
-                            }
-                          })}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Top Gap</label>
-                    <input 
-                      type="number"
-                      step="0.1"
-                      className="w-full p-2 border rounded"
-                      value={formValues.gaps.top ?? ''}
-                      onWheel={preventScroll}
-                      onKeyDown={(e) => handleNumberInput(e)}
-                      onChange={(e) => handleInputChange('gaps', {
-                        ...formValues.gaps,
-                        top: e.target.value ? parseFloat(e.target.value) : null
-                      })}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Bottom Gap</label>
-                    <input 
-                      type="number"
-                      step="0.1"
-                      className="w-full p-2 border rounded"
-                      value={formValues.gaps.bottom ?? ''}
-                      onWheel={preventScroll}
-                      onKeyDown={(e) => handleNumberInput(e)}
-                      onChange={(e) => handleInputChange('gaps', {
-                        ...formValues.gaps,
-                        bottom: e.target.value ? parseFloat(e.target.value) : null
-                      })}
-                    />
-                  </div>
-                </>
-              )}
             </div>
           </div>
         )}
@@ -1881,7 +1837,7 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
             />
 
             <DropdownWithNotes 
-              label="Door Tag" 
+              label="Fire Tag" 
               options={statusOptions.doorTag}
               value={formValues.inspection.fireTag.status}
               onChange={(value) => handleStatusChange('inspection.fireTag.status', value)}

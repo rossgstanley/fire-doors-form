@@ -108,7 +108,7 @@ export const SurveyList: React.FC<SurveyListProps> = ({ refreshTrigger }) => {
                   {survey.installation_type}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {survey.fire_rating}
+                  {survey.fire_rating ? `-/${survey.fire_rating}` : ''}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <span className={`px-2 py-1 rounded ${survey.pass_fail ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
