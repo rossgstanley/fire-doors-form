@@ -94,14 +94,14 @@ interface FormValues {
   installationType: string;
   manufacturer: string;
   doorsetNumber: string;
-  dateInstalled: {
-    day: string;
+  dateManufactured: {
     month: string;
     year: string;
   };
   fireRating: {
     integrity: string;
     insulation: string;
+    smokeControl: string;
   };
   doorCloser: {
     brand: string;
@@ -151,6 +151,14 @@ interface FormValues {
     rightSide: number | null;
     inBetween: number | null;
     protrusion: number | null;
+    leftDoor?: {
+      top: number | null;
+      bottom: number | null;
+    };
+    rightDoor?: {
+      top: number | null;
+      bottom: number | null;
+    };
   };
   buildingFeatures: {
     security: {
@@ -211,7 +219,7 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
     doorLeaf: ['Chipped', 'Cracked', 'With Voids', 'Altered', 'Binding'],
     doorFrame: ['Chipped', 'Cracked', 'With Voids', 'Altered'],
     visionPanel: ['Not Present', 'Cracked', 'Scratched'],
-    seals: ['Loose', 'Incomplete', 'Missing', 'With Tears'],
+    seals: ['Loose', 'Incomplete', 'Missing', 'With Tears', 'Painted'],
     hinges: ['Loose Screw', 'Missing Screw', 'Squeaky', 'Misaligned', 'Rusty/Tarnished'],
     doorCloser: ['Delayed/Not Closing', 'Rapid Closing', 'Unusual Noise'],
     hardware: ['Sticky Locks', 'Loose Locks', 'Misaligned', 'Needs Lubrication'],
@@ -244,14 +252,14 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
     installationType: 'interior',
     manufacturer: '',
     doorsetNumber: '',
-    dateInstalled: { 
-      day: '', 
+    dateManufactured: { 
       month: '', 
       year: '' 
     },
     fireRating: { 
       integrity: '', 
-      insulation: '' 
+      insulation: '',
+      smokeControl: ''
     },
     doorCloser: {
       brand: '',
@@ -492,11 +500,11 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
         installation_type: formValues.installationType,
         manufacturer: formValues.manufacturer,
         doorset_number: formValues.doorsetNumber,
-        date_installed: formValues.dateInstalled.day && formValues.dateInstalled.month && formValues.dateInstalled.year 
-          ? `${formValues.dateInstalled.year}-${formValues.dateInstalled.month}-${formValues.dateInstalled.day}` 
+        date_manufactured: formValues.dateManufactured.month && formValues.dateManufactured.year 
+          ? `${formValues.dateManufactured.year}-${formValues.dateManufactured.month}-01` 
           : null,
         fire_rating: formValues.fireRating.integrity && formValues.fireRating.insulation 
-          ? `${formValues.fireRating.integrity}/${formValues.fireRating.insulation}` 
+          ? `${formValues.fireRating.integrity}/${formValues.fireRating.insulation}${formValues.fireRating.smokeControl ? ' sm' : ''}` 
           : null,
         door_closer: JSON.stringify({
           brand: formValues.doorCloser.brand,
@@ -850,33 +858,19 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Date Installed</label>
-                <div className="grid grid-cols-3 gap-2">
-                  <input
-                    type="number"
-                    placeholder="DD"
-                    className="w-full p-2 border rounded"
-                    min="1"
-                    max="31"
-                    value={formValues.dateInstalled.day}
-                    onWheel={preventScroll}
-                    onKeyDown={(e) => handleNumberInput(e)}
-                    onChange={(e) => handleInputChange('dateInstalled', {
-                      ...formValues.dateInstalled,
-                      day: e.target.value
-                    })}
-                  />
+                <label className="block text-sm font-medium mb-1">Date Manufactured</label>
+                <div className="grid grid-cols-2 gap-2">
                   <input
                     type="number"
                     placeholder="MM"
                     className="w-full p-2 border rounded"
                     min="1"
                     max="12"
-                    value={formValues.dateInstalled.month}
+                    value={formValues.dateManufactured.month}
                     onWheel={preventScroll}
                     onKeyDown={(e) => handleNumberInput(e)}
-                    onChange={(e) => handleInputChange('dateInstalled', {
-                      ...formValues.dateInstalled,
+                    onChange={(e) => handleInputChange('dateManufactured', {
+                      ...formValues.dateManufactured,
                       month: e.target.value
                     })}
                   />
@@ -886,11 +880,11 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                     className="w-full p-2 border rounded"
                     min="1900"
                     max={new Date().getFullYear()}
-                    value={formValues.dateInstalled.year}
+                    value={formValues.dateManufactured.year}
                     onWheel={preventScroll}
                     onKeyDown={(e) => handleNumberInput(e)}
-                    onChange={(e) => handleInputChange('dateInstalled', {
-                      ...formValues.dateInstalled,
+                    onChange={(e) => handleInputChange('dateManufactured', {
+                      ...formValues.dateManufactured,
                       year: e.target.value
                     })}
                   />
@@ -925,6 +919,17 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                       insulation: e.target.value
                     })}
                   />
+                  <select
+                    className="w-24 p-2 border rounded"
+                    value={formValues.fireRating.smokeControl || ''}
+                    onChange={(e) => handleInputChange('fireRating', {
+                      ...formValues.fireRating,
+                      smokeControl: e.target.value
+                    })}
+                  >
+                    <option value=""></option>
+                    <option value="sm">sm</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -1359,38 +1364,6 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
             <h3 className="font-semibold mb-4 mt-6">Gap Measurements (mm)</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div>
-                <label className="block text-sm font-medium mb-1">Top Gap</label>
-                <input 
-                  type="number"
-                  step="0.1"
-                  className="w-full p-2 border rounded"
-                  value={formValues.gaps.top ?? ''}
-                  onWheel={preventScroll}
-                  onKeyDown={(e) => handleNumberInput(e)}
-                  onChange={(e) => handleInputChange('gaps', {
-                    ...formValues.gaps,
-                    top: e.target.value ? parseFloat(e.target.value) : null
-                  })}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Bottom Gap</label>
-                <input 
-                  type="number"
-                  step="0.1"
-                  className="w-full p-2 border rounded"
-                  value={formValues.gaps.bottom ?? ''}
-                  onWheel={preventScroll}
-                  onKeyDown={(e) => handleNumberInput(e)}
-                  onChange={(e) => handleInputChange('gaps', {
-                    ...formValues.gaps,
-                    bottom: e.target.value ? parseFloat(e.target.value) : null
-                  })}
-                />
-              </div>
-
-              <div>
                 <label className="block text-sm font-medium mb-1">Left Side Gap</label>
                 <input 
                   type="number"
@@ -1455,6 +1428,130 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                   })}
                 />
               </div>
+
+              {formValues.doorType === 'double' ? (
+                <>
+                  {/* Left Door */}
+                  <div className="col-span-2">
+                    <h4 className="font-medium mb-2">Left Door</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Top Gap</label>
+                        <input 
+                          type="number"
+                          step="0.1"
+                          className="w-full p-2 border rounded"
+                          value={formValues.gaps.leftDoor?.top ?? ''}
+                          onWheel={preventScroll}
+                          onKeyDown={(e) => handleNumberInput(e)}
+                          onChange={(e) => handleInputChange('gaps', {
+                            ...formValues.gaps,
+                            leftDoor: {
+                              ...formValues.gaps.leftDoor,
+                              top: e.target.value ? parseFloat(e.target.value) : null
+                            }
+                          })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Bottom Gap</label>
+                        <input 
+                          type="number"
+                          step="0.1"
+                          className="w-full p-2 border rounded"
+                          value={formValues.gaps.leftDoor?.bottom ?? ''}
+                          onWheel={preventScroll}
+                          onKeyDown={(e) => handleNumberInput(e)}
+                          onChange={(e) => handleInputChange('gaps', {
+                            ...formValues.gaps,
+                            leftDoor: {
+                              ...formValues.gaps.leftDoor,
+                              bottom: e.target.value ? parseFloat(e.target.value) : null
+                            }
+                          })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Right Door */}
+                  <div className="col-span-2">
+                    <h4 className="font-medium mb-2">Right Door</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Top Gap</label>
+                        <input 
+                          type="number"
+                          step="0.1"
+                          className="w-full p-2 border rounded"
+                          value={formValues.gaps.rightDoor?.top ?? ''}
+                          onWheel={preventScroll}
+                          onKeyDown={(e) => handleNumberInput(e)}
+                          onChange={(e) => handleInputChange('gaps', {
+                            ...formValues.gaps,
+                            rightDoor: {
+                              ...formValues.gaps.rightDoor,
+                              top: e.target.value ? parseFloat(e.target.value) : null
+                            }
+                          })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Bottom Gap</label>
+                        <input 
+                          type="number"
+                          step="0.1"
+                          className="w-full p-2 border rounded"
+                          value={formValues.gaps.rightDoor?.bottom ?? ''}
+                          onWheel={preventScroll}
+                          onKeyDown={(e) => handleNumberInput(e)}
+                          onChange={(e) => handleInputChange('gaps', {
+                            ...formValues.gaps,
+                            rightDoor: {
+                              ...formValues.gaps.rightDoor,
+                              bottom: e.target.value ? parseFloat(e.target.value) : null
+                            }
+                          })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Top Gap</label>
+                    <input 
+                      type="number"
+                      step="0.1"
+                      className="w-full p-2 border rounded"
+                      value={formValues.gaps.top ?? ''}
+                      onWheel={preventScroll}
+                      onKeyDown={(e) => handleNumberInput(e)}
+                      onChange={(e) => handleInputChange('gaps', {
+                        ...formValues.gaps,
+                        top: e.target.value ? parseFloat(e.target.value) : null
+                      })}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Bottom Gap</label>
+                    <input 
+                      type="number"
+                      step="0.1"
+                      className="w-full p-2 border rounded"
+                      value={formValues.gaps.bottom ?? ''}
+                      onWheel={preventScroll}
+                      onKeyDown={(e) => handleNumberInput(e)}
+                      onChange={(e) => handleInputChange('gaps', {
+                        ...formValues.gaps,
+                        bottom: e.target.value ? parseFloat(e.target.value) : null
+                      })}
+                    />
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
