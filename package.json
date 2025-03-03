@@ -1,4 +1,6 @@
 {
+  "name": "fire-doors-form",
+  "description": "Fire door survey form",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
