@@ -568,6 +568,7 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
     // Gap Measurements
     if (formValues.gaps.leftSide === null) missingFields.push('Left Side Gap');
     if (formValues.gaps.rightSide === null) missingFields.push('Right Side Gap');
+    if (formValues.gaps.protrusion === null) missingFields.push('Protrusion from Frame');
     
     // For single leaf door
     if (formValues.doorType === 'single') {
@@ -1518,13 +1519,13 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                   <input
                     type="number"
                     className="w-full p-2 border rounded"
-                    value={formValues.gaps.leftSide || ''}
+                    value={formValues.gaps.leftSide ?? ''}
                     min="0"
                     onWheel={preventScroll}
                     onKeyDown={(e) => handleNumberInput(e)}
                     onChange={(e) => handleInputChange('gaps', {
                       ...formValues.gaps,
-                      leftSide: e.target.value ? Number(e.target.value) : null
+                      leftSide: e.target.value === '' ? null : Number(e.target.value)
                     })}
                   />
                 </div>
@@ -1536,13 +1537,13 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                   <input
                     type="number"
                     className="w-full p-2 border rounded"
-                    value={formValues.gaps.rightSide || ''}
+                    value={formValues.gaps.rightSide ?? ''}
                     min="0"
                     onWheel={preventScroll}
                     onKeyDown={(e) => handleNumberInput(e)}
                     onChange={(e) => handleInputChange('gaps', {
                       ...formValues.gaps,
-                      rightSide: e.target.value ? Number(e.target.value) : null
+                      rightSide: e.target.value === '' ? null : Number(e.target.value)
                     })}
                   />
                 </div>
@@ -1556,13 +1557,13 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                       <input
                         type="number"
                         className="w-full p-2 border rounded"
-                        value={formValues.gaps.top || ''}
+                        value={formValues.gaps.top ?? ''}
                         min="0"
                         onWheel={preventScroll}
                         onKeyDown={(e) => handleNumberInput(e)}
                         onChange={(e) => handleInputChange('gaps', {
                           ...formValues.gaps,
-                          top: e.target.value ? Number(e.target.value) : null
+                          top: e.target.value === '' ? null : Number(e.target.value)
                         })}
                       />
                     </div>
@@ -1574,18 +1575,36 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                       <input
                         type="number"
                         className="w-full p-2 border rounded"
-                        value={formValues.gaps.bottom || ''}
+                        value={formValues.gaps.bottom ?? ''}
                         min="0"
                         onWheel={preventScroll}
                         onKeyDown={(e) => handleNumberInput(e)}
                         onChange={(e) => handleInputChange('gaps', {
                           ...formValues.gaps,
-                          bottom: e.target.value ? Number(e.target.value) : null
+                          bottom: e.target.value === '' ? null : Number(e.target.value)
                         })}
                       />
                     </div>
                   </>
                 )}
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Protrusion from Frame (mm) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full p-2 border rounded"
+                    value={formValues.gaps.protrusion ?? ''}
+                    min="0"
+                    onWheel={preventScroll}
+                    onKeyDown={(e) => handleNumberInput(e)}
+                    onChange={(e) => handleInputChange('gaps', {
+                      ...formValues.gaps,
+                      protrusion: e.target.value === '' ? null : Number(e.target.value)
+                    })}
+                  />
+                </div>
 
                 {formValues.doorType === 'double' && (
                   <>
@@ -1596,31 +1615,13 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                       <input
                         type="number"
                         className="w-full p-2 border rounded"
-                        value={formValues.gaps.inBetween || ''}
+                        value={formValues.gaps.inBetween ?? ''}
                         min="0"
                         onWheel={preventScroll}
                         onKeyDown={(e) => handleNumberInput(e)}
                         onChange={(e) => handleInputChange('gaps', {
                           ...formValues.gaps,
-                          inBetween: e.target.value ? Number(e.target.value) : null
-                        })}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-1">
-                        Protrusion from Frame (mm) <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="number"
-                        className="w-full p-2 border rounded"
-                        value={formValues.gaps.protrusion || ''}
-                        min="0"
-                        onWheel={preventScroll}
-                        onKeyDown={(e) => handleNumberInput(e)}
-                        onChange={(e) => handleInputChange('gaps', {
-                          ...formValues.gaps,
-                          protrusion: e.target.value ? Number(e.target.value) : null
+                          inBetween: e.target.value === '' ? null : Number(e.target.value)
                         })}
                       />
                     </div>
@@ -1632,7 +1633,7 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                       <input
                         type="number"
                         className="w-full p-2 border rounded"
-                        value={formValues.gaps.leftDoor?.top || ''}
+                        value={formValues.gaps.leftDoor?.top ?? ''}
                         min="0"
                         onWheel={preventScroll}
                         onKeyDown={(e) => handleNumberInput(e)}
@@ -1640,7 +1641,7 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                           ...formValues.gaps,
                           leftDoor: {
                             ...formValues.gaps.leftDoor,
-                            top: e.target.value ? Number(e.target.value) : null
+                            top: e.target.value === '' ? null : Number(e.target.value)
                           }
                         })}
                       />
@@ -1653,7 +1654,7 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                       <input
                         type="number"
                         className="w-full p-2 border rounded"
-                        value={formValues.gaps.leftDoor?.bottom || ''}
+                        value={formValues.gaps.leftDoor?.bottom ?? ''}
                         min="0"
                         onWheel={preventScroll}
                         onKeyDown={(e) => handleNumberInput(e)}
@@ -1661,7 +1662,7 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                           ...formValues.gaps,
                           leftDoor: {
                             ...formValues.gaps.leftDoor,
-                            bottom: e.target.value ? Number(e.target.value) : null
+                            bottom: e.target.value === '' ? null : Number(e.target.value)
                           }
                         })}
                       />
@@ -1674,7 +1675,7 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                       <input
                         type="number"
                         className="w-full p-2 border rounded"
-                        value={formValues.gaps.rightDoor?.top || ''}
+                        value={formValues.gaps.rightDoor?.top ?? ''}
                         min="0"
                         onWheel={preventScroll}
                         onKeyDown={(e) => handleNumberInput(e)}
@@ -1682,7 +1683,7 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                           ...formValues.gaps,
                           rightDoor: {
                             ...formValues.gaps.rightDoor,
-                            top: e.target.value ? Number(e.target.value) : null
+                            top: e.target.value === '' ? null : Number(e.target.value)
                           }
                         })}
                       />
@@ -1695,7 +1696,7 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                       <input
                         type="number"
                         className="w-full p-2 border rounded"
-                        value={formValues.gaps.rightDoor?.bottom || ''}
+                        value={formValues.gaps.rightDoor?.bottom ?? ''}
                         min="0"
                         onWheel={preventScroll}
                         onKeyDown={(e) => handleNumberInput(e)}
@@ -1703,7 +1704,7 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                           ...formValues.gaps,
                           rightDoor: {
                             ...formValues.gaps.rightDoor,
-                            bottom: e.target.value ? Number(e.target.value) : null
+                            bottom: e.target.value === '' ? null : Number(e.target.value)
                           }
                         })}
                       />
