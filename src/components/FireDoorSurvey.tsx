@@ -477,9 +477,157 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
     }));
   };
 
+  // Add this helper function to check survey status
+  const getSurveyStatus = (formValues: FormValues) => {
+    const failures = [];
+
+    // Check gaps - only add if they fail
+    if (formValues.gaps.top !== null && formValues.gaps.top > 3) {
+      failures.push('Top gap exceeds 3mm');
+    }
+    if (formValues.gaps.bottom !== null && (formValues.gaps.bottom < 3 || formValues.gaps.bottom > 10)) {
+      failures.push('Bottom gap not between 3mm and 10mm');
+    }
+    if (formValues.gaps.leftSide !== null && formValues.gaps.leftSide > 3) {
+      failures.push('Left side gap exceeds 3mm');
+    }
+    if (formValues.gaps.rightSide !== null && formValues.gaps.rightSide > 3) {
+      failures.push('Right side gap exceeds 3mm');
+    }
+    if (formValues.gaps.inBetween !== null && (formValues.gaps.inBetween < 3 || formValues.gaps.inBetween > 10)) {
+      failures.push('In-between gap not between 3mm and 10mm');  // Updated range
+    }
+    if (formValues.gaps.protrusion !== null && formValues.gaps.protrusion > 1) {
+      failures.push('Protrusion exceeds 1mm');
+    }
+
+    // Check inspection items - only add if they have issues
+    const criticalInspectionItems = {
+      'Door Leaf': formValues.inspection.doorLeaf,
+      'Door Frame': formValues.inspection.doorFrame,
+      'Intumescent Seal': formValues.inspection.intumescentSeal,
+      'Smoke Seal': formValues.inspection.smokeSeal,
+      'Hinges': formValues.inspection.hinges,
+      'Door Closer': formValues.inspection.doorCloser,
+      'Locks and Latches': formValues.inspection.hardware,
+      'Door Tag': formValues.inspection.fireTag,
+      'Door Signage': formValues.inspection.doorSignage
+    };
+
+    Object.entries(criticalInspectionItems).forEach(([itemName, item]) => {
+      if (item.status.length > 0) {
+        failures.push(`${itemName} issues: ${item.status.join(', ')}`);
+      }
+    });
+
+    return {
+      passed: failures.length === 0,
+      failures: failures // Only contains actual failures
+    };
+  };
+
+  // Add validation function for required fields
+  const validateRequiredFields = (): { isValid: boolean; missingFields: string[] } => {
+    const missingFields: string[] = [];
+    
+    // Door Details
+    if (!formValues.doorType) missingFields.push('Door Type');
+    if (!formValues.installationType) missingFields.push('Installation Type');
+    if (!formValues.fireRating.integrity || !formValues.fireRating.insulation) missingFields.push('Fire Resistance Rating');
+    
+    // Components
+    if (!formValues.doorCloser.brand) missingFields.push('Door Closer Brand');
+    if (formValues.hinges.numSets === null) missingFields.push('Number of Hinges');
+    
+    // Dimensions - Leaf
+    if (!formValues.leafDimensions.width) missingFields.push('Leaf Width');
+    if (!formValues.leafDimensions.height) missingFields.push('Leaf Height');
+    if (!formValues.leafDimensions.thickness) missingFields.push('Leaf Thickness');
+    
+    // Vision Panel - First Leaf (if present)
+    if (formValues.leafDimensions.hasVisionPanel) {
+      if (!formValues.leafDimensions.visionPanel.width) missingFields.push('First Leaf Vision Panel Width');
+      if (!formValues.leafDimensions.visionPanel.height) missingFields.push('First Leaf Vision Panel Height');
+      if (!formValues.leafDimensions.visionPanelMaterial) missingFields.push('First Leaf Vision Panel Material');
+    }
+    
+    // Second Leaf Dimensions (if double door)
+    if (formValues.doorType === 'double') {
+      if (!formValues.secondLeafDimensions?.width) missingFields.push('Second Leaf Width');
+      if (!formValues.secondLeafDimensions?.height) missingFields.push('Second Leaf Height');
+      if (!formValues.secondLeafDimensions?.thickness) missingFields.push('Second Leaf Thickness');
+      
+      // Vision Panel - Second Leaf (if present)
+      if (formValues.secondLeafDimensions?.hasVisionPanel) {
+        if (!formValues.secondLeafDimensions?.visionPanel?.width) missingFields.push('Second Leaf Vision Panel Width');
+        if (!formValues.secondLeafDimensions?.visionPanel?.height) missingFields.push('Second Leaf Vision Panel Height');
+        if (!formValues.secondLeafDimensions?.visionPanelMaterial) missingFields.push('Second Leaf Vision Panel Material');
+      }
+    }
+    
+    // Gap Measurements
+    if (formValues.gaps.leftSide === null) missingFields.push('Left Side Gap');
+    if (formValues.gaps.rightSide === null) missingFields.push('Right Side Gap');
+    
+    // For single leaf door
+    if (formValues.doorType === 'single') {
+      if (formValues.gaps.top === null) missingFields.push('Top Gap');
+      if (formValues.gaps.bottom === null) missingFields.push('Bottom Gap');
+    }
+    
+    // For double leaf door
+    if (formValues.doorType === 'double') {
+      if (formValues.gaps.inBetween === null) missingFields.push('In-Between Gap');
+      
+      // Left door gaps
+      if (formValues.gaps.leftDoor?.top === null || formValues.gaps.leftDoor?.top === undefined) {
+        missingFields.push('Left Door Top Gap');
+      }
+      if (formValues.gaps.leftDoor?.bottom === null || formValues.gaps.leftDoor?.bottom === undefined) {
+        missingFields.push('Left Door Bottom Gap');
+      }
+      
+      // Right door gaps
+      if (formValues.gaps.rightDoor?.top === null || formValues.gaps.rightDoor?.top === undefined) {
+        missingFields.push('Right Door Top Gap');
+      }
+      if (formValues.gaps.rightDoor?.bottom === null || formValues.gaps.rightDoor?.bottom === undefined) {
+        missingFields.push('Right Door Bottom Gap');
+      }
+    }
+    
+    // Building Features
+    if (!formValues.buildingFeatures.doorLeafMaterial) missingFields.push('Door Leaf Material');
+    if (!formValues.buildingFeatures.doorFrameMaterial) missingFields.push('Door Frame Material');
+    
+    // Photos
+    if (formValues.photos.length === 0) missingFields.push('At least one photo');
+    
+    return {
+      isValid: missingFields.length === 0,
+      missingFields
+    };
+  };
+
+  // State for validation errors
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
   // Update handleSubmit
   const handleSubmit = async () => {
     try {
+      // Validate required fields
+      const { isValid, missingFields } = validateRequiredFields();
+      
+      if (!isValid) {
+        setValidationErrors(missingFields);
+        // Scroll to top to show validation errors
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+      
+      // Clear any previous validation errors
+      setValidationErrors([]);
+      
       const { passed } = getSurveyStatus(formValues);
 
       // Default coordinates (Wellington)
@@ -722,58 +870,26 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
     }
   };
 
-  // Add this helper function to check survey status
-  const getSurveyStatus = (formValues: FormValues) => {
-    const failures = [];
-
-    // Check gaps - only add if they fail
-    if (formValues.gaps.top !== null && formValues.gaps.top > 3) {
-      failures.push('Top gap exceeds 3mm');
-    }
-    if (formValues.gaps.bottom !== null && (formValues.gaps.bottom < 3 || formValues.gaps.bottom > 10)) {
-      failures.push('Bottom gap not between 3mm and 10mm');
-    }
-    if (formValues.gaps.leftSide !== null && formValues.gaps.leftSide > 3) {
-      failures.push('Left side gap exceeds 3mm');
-    }
-    if (formValues.gaps.rightSide !== null && formValues.gaps.rightSide > 3) {
-      failures.push('Right side gap exceeds 3mm');
-    }
-    if (formValues.gaps.inBetween !== null && (formValues.gaps.inBetween < 3 || formValues.gaps.inBetween > 10)) {
-      failures.push('In-between gap not between 3mm and 10mm');  // Updated range
-    }
-    if (formValues.gaps.protrusion !== null && formValues.gaps.protrusion > 1) {
-      failures.push('Protrusion exceeds 1mm');
-    }
-
-    // Check inspection items - only add if they have issues
-    const criticalInspectionItems = {
-      'Door Leaf': formValues.inspection.doorLeaf,
-      'Door Frame': formValues.inspection.doorFrame,
-      'Intumescent Seal': formValues.inspection.intumescentSeal,
-      'Smoke Seal': formValues.inspection.smokeSeal,
-      'Hinges': formValues.inspection.hinges,
-      'Door Closer': formValues.inspection.doorCloser,
-      'Locks and Latches': formValues.inspection.hardware,
-      'Door Tag': formValues.inspection.fireTag,
-      'Door Signage': formValues.inspection.doorSignage
-    };
-
-    Object.entries(criticalInspectionItems).forEach(([itemName, item]) => {
-      if (item.status.length > 0) {
-        failures.push(`${itemName} issues: ${item.status.join(', ')}`);
-      }
-    });
-
-    return {
-      passed: failures.length === 0,
-      failures: failures // Only contains actual failures
-    };
-  };
-
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       <h1 className="text-3xl font-bold mb-8">Fire Door Survey</h1>
+
+      {/* Validation Error Message */}
+      {validationErrors.length > 0 && (
+        <div className="mb-6 bg-red-50 border border-red-200 p-4 rounded-md">
+          <div className="flex items-start">
+            <AlertCircle className="h-5 w-5 text-red-600 mr-2 mt-0.5" />
+            <div className="text-red-600">
+              <p className="font-medium mb-2">Please fill in the following required fields:</p>
+              <ul className="list-disc list-inside">
+                {validationErrors.map((error, index) => (
+                  <li key={index}>{error}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Location Details Section - Map hidden but still tracking coordinates */}
       <div className="bg-white rounded-lg shadow">
@@ -811,7 +927,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div>
-                <label className="block text-sm font-medium mb-1">Door Type</label>
+                <label className="block text-sm font-medium mb-1">
+                  Door Type <span className="text-red-500">*</span>
+                </label>
                 <select 
                   className="w-full p-2 border rounded"
                   value={formValues.doorType}
@@ -825,7 +943,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Installation Type</label>
+                <label className="block text-sm font-medium mb-1">
+                  Installation Type <span className="text-red-500">*</span>
+                </label>
                 <select 
                   className="w-full p-2 border rounded"
                   value={formValues.installationType}
@@ -891,7 +1011,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Fire Resistance Rating</label>
+                <label className="block text-sm font-medium mb-1">
+                  Fire Resistance Rating <span className="text-red-500">*</span>
+                </label>
                 <div className="flex items-center gap-2">
                   <span className="text-lg">-/</span>
                   <input
@@ -952,7 +1074,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
               <h3 className="font-semibold mb-4">Door Closer</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Brand</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Brand <span className="text-red-500">*</span>
+                  </label>
                   <input 
                     type="text"
                     className="w-full p-2 border rounded"
@@ -983,7 +1107,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
               <h3 className="font-semibold mb-4">Hinges</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Number of Sets</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Number of Sets <span className="text-red-500">*</span>
+                  </label>
                   <input 
                     type="number"
                     className="w-full p-2 border rounded"
@@ -1023,9 +1149,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
               </div>
             </div>
 
-            {/* Door Handle, Locks, and Latches Sub-section */}
+            {/* Hardware Sub-section */}
             <div className="border rounded-lg p-4">
-              <h3 className="font-semibold mb-4">Door Handle, Locks, and Latches</h3>
+              <h3 className="font-semibold mb-4">Hardware</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Brand</label>
@@ -1067,13 +1193,12 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
         />
         {expandedSections.dimensions && (
           <div className="p-6">
-            {/* First Leaf */}
-            <h3 className="font-semibold mb-4">
-              {formValues.doorType === 'double' ? 'Leaf Dimensions (Left)' : 'Leaf Dimensions'}
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <h3 className="font-semibold mb-4">Leaf Dimensions (Left)</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div>
-                <label className="block text-sm font-medium mb-1">Width (mm)</label>
+                <label className="block text-sm font-medium mb-1">
+                  Width (mm) <span className="text-red-500">*</span>
+                </label>
                 <input 
                   type="number"
                   className="w-full p-2 border rounded"
@@ -1087,7 +1212,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Height (mm)</label>
+                <label className="block text-sm font-medium mb-1">
+                  Height (mm) <span className="text-red-500">*</span>
+                </label>
                 <input 
                   type="number"
                   className="w-full p-2 border rounded"
@@ -1101,7 +1228,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Thickness (mm)</label>
+                <label className="block text-sm font-medium mb-1">
+                  Thickness (mm) <span className="text-red-500">*</span>
+                </label>
                 <input 
                   type="number"
                   className="w-full p-2 border rounded"
@@ -1134,7 +1263,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
             {formValues.leafDimensions.hasVisionPanel && (
               <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Width (mm)</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Width (mm) <span className="text-red-500">*</span>
+                  </label>
                   <input 
                     type="number"
                     className="w-full p-2 border rounded"
@@ -1151,7 +1282,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Height (mm)</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Height (mm) <span className="text-red-500">*</span>
+                  </label>
                   <input 
                     type="number"
                     className="w-full p-2 border rounded"
@@ -1168,7 +1301,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Material</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Material <span className="text-red-500">*</span>
+                  </label>
                   <select
                     className="w-full p-2 border rounded"
                     value={formValues.leafDimensions.visionPanelMaterial}
@@ -1190,7 +1325,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                 <h3 className="font-semibold mb-4">Leaf Dimensions (Right)</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Width (mm)</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Width (mm) <span className="text-red-500">*</span>
+                    </label>
                     <input 
                       type="number"
                       className="w-full p-2 border rounded"
@@ -1211,7 +1348,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Height (mm)</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Height (mm) <span className="text-red-500">*</span>
+                    </label>
                     <input 
                       type="number"
                       className="w-full p-2 border rounded"
@@ -1232,7 +1371,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Thickness (mm)</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Thickness (mm) <span className="text-red-500">*</span>
+                    </label>
                     <input 
                       type="number"
                       className="w-full p-2 border rounded"
@@ -1278,7 +1419,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                 {formValues.secondLeafDimensions?.hasVisionPanel && (
                   <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm font-medium mb-1">Width (mm)</label>
+                      <label className="block text-sm font-medium mb-1">
+                        Width (mm) <span className="text-red-500">*</span>
+                      </label>
                       <input 
                         type="number"
                         className="w-full p-2 border rounded"
@@ -1305,7 +1448,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Height (mm)</label>
+                      <label className="block text-sm font-medium mb-1">
+                        Height (mm) <span className="text-red-500">*</span>
+                      </label>
                       <input 
                         type="number"
                         className="w-full p-2 border rounded"
@@ -1332,7 +1477,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Material</label>
+                      <label className="block text-sm font-medium mb-1">
+                        Material <span className="text-red-500">*</span>
+                      </label>
                       <select
                         className="w-full p-2 border rounded"
                         value={formValues.secondLeafDimensions?.visionPanelMaterial ?? 'clear'}
@@ -1365,7 +1512,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
               <h3 className="font-semibold mb-4">Gap Measurements</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Left Side Gap (mm)</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Left Side Gap (mm) <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="number"
                     className="w-full p-2 border rounded"
@@ -1381,7 +1530,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Right Side Gap (mm)</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Right Side Gap (mm) <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="number"
                     className="w-full p-2 border rounded"
@@ -1396,42 +1547,88 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-1">In-Between Gap (mm)</label>
-                  <input
-                    type="number"
-                    className="w-full p-2 border rounded"
-                    value={formValues.gaps.inBetween || ''}
-                    min="0"
-                    onWheel={preventScroll}
-                    onKeyDown={(e) => handleNumberInput(e)}
-                    onChange={(e) => handleInputChange('gaps', {
-                      ...formValues.gaps,
-                      inBetween: e.target.value ? Number(e.target.value) : null
-                    })}
-                  />
-                </div>
+                {formValues.doorType === 'single' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        Top Gap (mm) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        className="w-full p-2 border rounded"
+                        value={formValues.gaps.top || ''}
+                        min="0"
+                        onWheel={preventScroll}
+                        onKeyDown={(e) => handleNumberInput(e)}
+                        onChange={(e) => handleInputChange('gaps', {
+                          ...formValues.gaps,
+                          top: e.target.value ? Number(e.target.value) : null
+                        })}
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-1">Protrusion from Frame (mm)</label>
-                  <input
-                    type="number"
-                    className="w-full p-2 border rounded"
-                    value={formValues.gaps.protrusion || ''}
-                    min="0"
-                    onWheel={preventScroll}
-                    onKeyDown={(e) => handleNumberInput(e)}
-                    onChange={(e) => handleInputChange('gaps', {
-                      ...formValues.gaps,
-                      protrusion: e.target.value ? Number(e.target.value) : null
-                    })}
-                  />
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        Bottom Gap (mm) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        className="w-full p-2 border rounded"
+                        value={formValues.gaps.bottom || ''}
+                        min="0"
+                        onWheel={preventScroll}
+                        onKeyDown={(e) => handleNumberInput(e)}
+                        onChange={(e) => handleInputChange('gaps', {
+                          ...formValues.gaps,
+                          bottom: e.target.value ? Number(e.target.value) : null
+                        })}
+                      />
+                    </div>
+                  </>
+                )}
 
                 {formValues.doorType === 'double' && (
                   <>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Left Door Top Gap (mm)</label>
+                      <label className="block text-sm font-medium mb-1">
+                        In-Between Gap (mm) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        className="w-full p-2 border rounded"
+                        value={formValues.gaps.inBetween || ''}
+                        min="0"
+                        onWheel={preventScroll}
+                        onKeyDown={(e) => handleNumberInput(e)}
+                        onChange={(e) => handleInputChange('gaps', {
+                          ...formValues.gaps,
+                          inBetween: e.target.value ? Number(e.target.value) : null
+                        })}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        Protrusion from Frame (mm) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        className="w-full p-2 border rounded"
+                        value={formValues.gaps.protrusion || ''}
+                        min="0"
+                        onWheel={preventScroll}
+                        onKeyDown={(e) => handleNumberInput(e)}
+                        onChange={(e) => handleInputChange('gaps', {
+                          ...formValues.gaps,
+                          protrusion: e.target.value ? Number(e.target.value) : null
+                        })}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        Left Door Top Gap (mm) <span className="text-red-500">*</span>
+                      </label>
                       <input
                         type="number"
                         className="w-full p-2 border rounded"
@@ -1450,7 +1647,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-1">Left Door Bottom Gap (mm)</label>
+                      <label className="block text-sm font-medium mb-1">
+                        Left Door Bottom Gap (mm) <span className="text-red-500">*</span>
+                      </label>
                       <input
                         type="number"
                         className="w-full p-2 border rounded"
@@ -1469,7 +1668,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-1">Right Door Top Gap (mm)</label>
+                      <label className="block text-sm font-medium mb-1">
+                        Right Door Top Gap (mm) <span className="text-red-500">*</span>
+                      </label>
                       <input
                         type="number"
                         className="w-full p-2 border rounded"
@@ -1488,7 +1689,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-1">Right Door Bottom Gap (mm)</label>
+                      <label className="block text-sm font-medium mb-1">
+                        Right Door Bottom Gap (mm) <span className="text-red-500">*</span>
+                      </label>
                       <input
                         type="number"
                         className="w-full p-2 border rounded"
@@ -1526,7 +1729,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
             {/* Door Materials - moved to top */}
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Door Leaf Material</label>
+                <label className="block text-sm font-medium mb-1">
+                  Door Leaf Material <span className="text-red-500">*</span>
+                </label>
                 <select
                   className="w-full p-2 border rounded"
                   value={formValues.buildingFeatures.doorLeafMaterial || ''}
@@ -1542,7 +1747,9 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-1">Door Frame Material</label>
+                <label className="block text-sm font-medium mb-1">
+                  Door Frame Material <span className="text-red-500">*</span>
+                </label>
                 <select
                   className="w-full p-2 border rounded"
                   value={formValues.buildingFeatures.doorFrameMaterial || ''}
@@ -1879,7 +2086,8 @@ export const FireDoorSurvey: React.FC<FireDoorSurveyProps> = ({ onSubmitSuccess 
                 />
                 <label htmlFor="photo-upload" className="cursor-pointer">
                   <Camera className="mx-auto h-12 w-12 text-gray-400" />
-                  <p className="mt-2 text-sm text-gray-600">Click to upload photos or use camera</p>
+                  <p className="mt-2 text-sm text-gray-600">Click to upload photos or use camera <span className="text-red-500">*</span></p>
+                  <p className="text-xs text-gray-500">(At least one photo required)</p>
                 </label>
               </div>
             </div>
